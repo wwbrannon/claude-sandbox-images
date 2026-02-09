@@ -83,9 +83,8 @@ ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
 
-# Create agent user and directories
-RUN useradd -m -s /bin/bash agent && \
-    mkdir -p /home/agent/.claude/hooks /home/agent/.claude/logs /etc/claude-code && \
+# Create directories (agent user already exists in base image)
+RUN mkdir -p /home/agent/.claude/hooks /home/agent/.claude/logs /etc/claude-code && \
     chown -R agent:agent /home/agent/.claude
 
 # Copy Claude Code configuration files
