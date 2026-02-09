@@ -8,71 +8,44 @@ ENV CLAUDE_SANDBOX_MODE=enabled \
     DEBIAN_FRONTEND=noninteractive \
     TERM=xterm-256color
 
+# Repo for recent github cli, see official docs at:
+# https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
+# the one packaged in the ubuntu repos is 2 years old
+RUN mkdir -p -m 755 /etc/apt/keyrings && \
+    out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg && \
+    cat $out | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    mkdir -p -m 755 /etc/apt/sources.list.d && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+
 # Install system packages and development tools in a single layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Build toolchain
-    build-essential \
-    autoconf \
-    automake \
-    libtool \
-    make \
-    cmake \
-    gcc \
-    g++ \
-    pkg-config \
-    # Version control and collaboration
-    git \
-    git-lfs \
-    # Security and sandboxing
+    build-essential gfortran binutils \
+    autoconf automake m4 bison flex gdb libtool linux-headers-generic \
+    git subversion bzr mercurial cvs gh git-lfs git-delta \
+    bzip2 gzip zip unzip zlib1g zlib1g-dev libssl-dev \
+    jq pkg-config cmake shellcheck shfmt exuberant-ctags \
+    less tree dos2unix uni2ascii pv rlwrap locate members diffutils \
+    ripgrep fd-find bat fzf \
     bubblewrap \
-    # Shell and editing
-    vim \
-    nano \
-    less \
-    # Modern CLI tools
-    ripgrep \
-    fd-find \
-    tree \
-    bat \
-    # Utilities
-    jq \
-    curl \
-    wget \
-    ca-certificates \
-    # Misc
-    locales \
-    && \
-    # Install fzf
-    git clone --depth 1 https://github.com/junegunn/fzf.git /opt/fzf && \
-    /opt/fzf/install --all && \
-    # Install git-delta
-    DELTA_VERSION=0.17.0 && \
-    curl -L "https://github.com/dandavison/delta/releases/download/${DELTA_VERSION}/git-delta_${DELTA_VERSION}_amd64.deb" -o /tmp/delta.deb && \
-    dpkg -i /tmp/delta.deb && \
-    rm /tmp/delta.deb && \
-    # Install shellcheck
-    SHELLCHECK_VERSION=v0.9.0 && \
-    curl -L "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" -o /tmp/shellcheck.tar.xz && \
-    tar -xf /tmp/shellcheck.tar.xz -C /tmp && \
-    mv /tmp/shellcheck-${SHELLCHECK_VERSION}/shellcheck /usr/local/bin/ && \
-    rm -rf /tmp/shellcheck* && \
-    # Install shfmt
-    SHFMT_VERSION=v3.8.0 && \
-    curl -L "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64" -o /usr/local/bin/shfmt && \
-    chmod +x /usr/local/bin/shfmt && \
-    # Install GitHub CLI
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
-    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
-    apt-get update && \
-    apt-get install -y gh && \
-    # Configure locales
-    locale-gen en_US.UTF-8 && \
-    # Clean up
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    \
+    vim nano \
+    \
+    unixodbc unixodbc-dev sqlite3 mysql-client postgresql-client libpq-dev \
+    pgtop odbc-postgresql \
+    \
+    ca-certificates locales tzdata wamerican \
+    curl wget gnupg gnupg-agent apt-transport-https apt-utils \
+    software-properties-common \
+    \
+    libopenblas-dev liblapack-dev libomp-dev libgsl-dev libarpack2-dev \
+    \
+    gnuplot ffmpeg imagemagick pandoc \
+    \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Set locale
+RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
@@ -108,9 +81,6 @@ RUN mkdir -p /workspace && chown agent:agent /workspace
 # Switch to agent user
 USER agent
 WORKDIR /workspace
-
-# Set final environment
-ENV PATH="/opt/fzf/bin:${PATH}"
 
 # Default command
 CMD ["/bin/bash"]
