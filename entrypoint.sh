@@ -4,14 +4,15 @@
 
 set -e
 
-# Start cron daemon as root (must run before switching users)
-if [ "$(id -u)" = "0" ]; then
-    # Running as root - start cron
-    service cron start >/dev/null 2>&1 || true
-
-    # Switch to agent user and run command
-    exec gosu agent "${@:-/bin/bash}"
-else
-    # Already running as non-root, just exec the command
-    exec "${@:-/bin/bash}"
+# Must run as root to start cron
+if [ "$(id -u)" != "0" ]; then
+    echo "ERROR: Entrypoint must run as root to start cron." >&2
+    echo "Remove USER directives before ENTRYPOINT in Dockerfile." >&2
+    exit 1
 fi
+
+# Start cron daemon
+service cron start >/dev/null 2>&1 || true
+
+# Switch to agent user and run command
+exec gosu agent "${@:-/bin/bash}"
