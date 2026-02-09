@@ -2,6 +2,9 @@
 # Foundation with security settings, Unix toolchain, and development utilities
 FROM docker/sandbox-templates:claude-code
 
+# Switch to root for package installations
+USER root
+
 # Set environment variables
 ENV CLAUDE_SANDBOX_MODE=enabled \
     CLAUDE_AUTO_ALLOW_SANDBOXED=true \
