@@ -58,7 +58,7 @@ This sandbox uses **layered security** for defense in depth:
 ### Completely Denied
 - Reading project secrets: `.env`, `.env.*`, `secrets/`, `credentials/`
 - Destructive filesystem: `rm -rf`, `chmod 777`, `chown`
-- Privilege escalation: `sudo`, `su`
+- Privilege escalation: `sudo`, `su`, `gosu`
 - Network exfiltration: `curl`, `wget`, `nc` (except to allowed domains)
 - Package installation: `apt-get install`, `brew install`
 - System file editing: `/etc/`, `/bin/`, shell configs
@@ -79,7 +79,7 @@ This sandbox uses **layered security** for defense in depth:
 ## Network Access
 
 The sandbox allows network access to these domains only:
-- **Package registries**: npmjs.org, pypi.org, crates.io, rubygems.org, maven.org
+- **Package registries**: npmjs.org, pypi.org (including pythonhosted.org), crates.io, rubygems.org, cran.r-project.org (including CRAN mirrors), maven.org
 - **Version control**: github.com, api.github.com, raw.githubusercontent.com
 - **Cloud providers**: *.amazonaws.com, *.googleapis.com, *.azure.com
 - **Documentation**: stackoverflow.com, stackexchange.com
