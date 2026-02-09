@@ -1,6 +1,113 @@
-# Claude Code Sandbox - Minimal Variant
-# Just the base image (alias for compatibility)
-FROM claude-sandbox-base
+# Claude Code Sandbox Base Image
+# Foundation with security settings, Unix toolchain, and development utilities
+FROM docker/sandbox-templates:claude-code
 
-# This is intentionally empty - it's just an alias for the base image
-# Use this when you want the minimal toolchain without language runtimes
+# Set environment variables
+ENV CLAUDE_SANDBOX_MODE=enabled \
+    CLAUDE_AUTO_ALLOW_SANDBOXED=true \
+    DEBIAN_FRONTEND=noninteractive \
+    TERM=xterm-256color
+
+# Deps for installing repos right
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      curl wget gnupg gnupg-agent apt-transport-https apt-utils \
+      ca-certificates software-properties-common lsb-release \
+      && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+#
+# Configure repos used here and in child images
+#
+
+RUN mkdir -p -m 755 /etc/apt/keyrings && mkdir -p -m 755 /etc/apt/sources.list.d
+
+## R Project's official R
+RUN curl -fsLS https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor > /etc/apt/keyrings/cran-ubuntu.gpg \
+    && chmod go+r /etc/apt/keyrings/cran-ubuntu.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cran-ubuntu.gpg] https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" | tee /etc/apt/sources.list.d/cran.list > /dev/null
+
+## r2u: up-to-date CRAN packages in R images
+RUN curl -fsLS https://eddelbuettel.github.io/r2u/assets/dirk_eddelbuettel_key.asc | gpg --dearmor > /etc/apt/keyrings/cranapt_key.gpg >/dev/null \
+    && chmod go+r /etc/apt/keyrings/cranapt_key.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cranapt_key.gpg] https://r2u.stat.illinois.edu/ubuntu jammy main" > /etc/apt/sources.list.d/cranapt.list
+
+## Azure CLI
+RUN curl -fsLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/keyrings/microsoft.gpg && \
+    chmod go+r /etc/apt/keyrings/microsoft.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list
+
+## Google Cloud CLI
+RUN curl -fsLS https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor > /etc/apt/keyrings/google-cloud.gpg \
+    && chmod go+r /etc/apt/keyrings/google-cloud.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/google-cloud.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
+
+## Recent github cli
+## See docs: https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
+RUN curl -fsLS https://cli.github.com/packages/githubcli-archive-keyring.gpg > /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+
+# Install system packages and development tools in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gfortran binutils \
+    autoconf automake m4 bison flex gdb libtool linux-headers-generic \
+    git subversion bzr mercurial cvs gh git-lfs git-delta \
+    bzip2 gzip zip unzip zlib1g zlib1g-dev libssl-dev \
+    jq pkg-config cmake shellcheck shfmt exuberant-ctags \
+    less tree dos2unix uni2ascii pv rlwrap locate members diffutils \
+    ripgrep fd-find bat fzf \
+    bubblewrap \
+    \
+    vim nano \
+    \
+    unixodbc unixodbc-dev sqlite3 mysql-client postgresql-client libpq-dev \
+    pgtop odbc-postgresql \
+    \
+    ca-certificates locales tzdata wamerican \
+    \
+    libopenblas-dev liblapack-dev libomp-dev libgsl-dev libarpack2-dev \
+    libcurl4-openssl-dev \
+    \
+    gnuplot ffmpeg imagemagick pandoc \
+    \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Set locale
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
+
+# Create agent user and directories
+RUN useradd -m -s /bin/bash agent && \
+    mkdir -p /home/agent/.claude/hooks /home/agent/.claude/logs /etc/claude-code && \
+    chown -R agent:agent /home/agent/.claude
+
+# Copy Claude Code configuration files
+COPY --chown=root:root managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=agent:agent settings.json /home/agent/.claude/settings.json
+COPY --chown=agent:agent hooks/pre-command-validator.sh /home/agent/.claude/hooks/pre-command-validator.sh
+COPY --chown=agent:agent hooks/post-command-logger.sh /home/agent/.claude/hooks/post-command-logger.sh
+
+# Make hooks executable
+RUN chmod +x /home/agent/.claude/hooks/*.sh
+
+# Copy user guide
+COPY SANDBOX-README.md /home/agent/README.md
+
+# Configure git for agent user
+RUN git config --system core.pager "delta" && \
+    git config --system interactive.diffFilter "delta --color-only" && \
+    git config --system delta.navigate true && \
+    git config --system delta.side-by-side true && \
+    git config --system merge.conflictstyle diff3 && \
+    git config --system diff.colorMoved default
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown agent:agent /workspace
+
+# Switch to agent user
+USER agent
+WORKDIR /workspace
+
+# Default command
+CMD ["/bin/bash"]

@@ -1,42 +1,32 @@
 # Claude Code Sandbox - R Variant
 # Base image + R ecosystem
-FROM claude-sandbox-base
+FROM claude-sandbox-minimal
 
 # Switch to root for installations
 USER root
 
-# Install R and dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    r-base \
-    r-base-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    libxml2-dev \
-    libfontconfig1-dev \
-    libharfbuzz-dev \
-    libfribidi-dev \
-    libfreetype6-dev \
-    libpng-dev \
-    libtiff5-dev \
-    libjpeg-dev \
+## Install lib dependencies, R/headers/base+recommended, CRAN packages
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
+    libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+    \
+    r-base r-base-dev r-recommended littler \
+    \
+    r-cran-tidyverse \
+    \
+    r-cran-patchwork r-cran-scales \
+    \
+    r-cran-devtools r-cran-usethis r-cran-testthat r-cran-roxygen2 \
+    r-cran-rmarkdown r-cran-knitr r-cran-pak r-cran-renv \
+    \
+    r-cran-data.table r-cran-arrow \
+    r-cran-readxl r-cran-writexl r-cran-haven r-cran-jsonlite r-cran-yaml \
+    \
+    r-cran-dbi r-cran-duckdb r-cran-rsqlite r-cran-odbc \
+    \
+    r-cran-lubridate r-cran-janitor \
+    \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install R packages
-RUN R -e "install.packages(c( \
-    'tidyverse', \
-    'ggplot2', \
-    'dplyr', \
-    'tidyr', \
-    'readr', \
-    'purrr', \
-    'tibble', \
-    'stringr', \
-    'forcats', \
-    'devtools', \
-    'testthat', \
-    'rmarkdown', \
-    'knitr' \
-    ), repos='https://cloud.r-project.org/')"
 
 # Switch back to agent user
 USER agent

@@ -1,0 +1,26 @@
+# Claude Code Sandbox - Python + Multi-Cloud CLI Variant
+# Python ecosystem + AWS, Azure, and GCP tools
+FROM claude-sandbox-python
+
+# Switch to root for installations
+USER root
+
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    google-cloud-cli azure-cli && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages for cloud SDKs
+RUN python3 -m pip install --no-cache-dir \
+    boto3 \
+    azure-storage-blob azure-identity \
+    google-cloud-storage google-cloud-bigquery google-cloud-compute
+
+# Install AWS CLI v2 -- no official apt repo
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" && \
+    unzip /tmp/awscliv2.zip -d /tmp && \
+    /tmp/aws/install && \
+    rm -rf /tmp/awscliv2.zip /tmp/aws
+
+# Switch back to agent user
+USER agent
+WORKDIR /workspace
