@@ -15,11 +15,6 @@
         "tool": "Bash",
         "pattern": "make *",
         "reason": "Project-specific build allowed"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "yarn *",
-        "reason": "Project-specific package manager allowed"
       }
     ]
   },
