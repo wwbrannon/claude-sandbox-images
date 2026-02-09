@@ -10,11 +10,11 @@ We chose a multi-tier architecture with a base image and specialized child image
 
 ```
 docker/sandbox-templates:claude-code (upstream)
-  └── claude-sandbox-base (our base)
+  └── claude-sandbox-minimal (our base)
       ├── claude-sandbox-python
       ├── claude-sandbox-r
-      ├── claude-sandbox-python-aws
-      ├── claude-sandbox-python-gcp
+      ├── claude-sandbox-python-cloud
+      ├── claude-sandbox-r-cloud
       └── claude-sandbox-full
 ```
 
@@ -142,6 +142,7 @@ Each layer protects against different threats:
 | Read .env in /workspace | Layer 3 (permission deny rules) |
 | curl to attacker.com | Layer 2 (sandbox allowedDomains) + Layer 3 (deny curl) |
 | Command injection | Layer 3 (deny patterns) + Layer 4 (hook validation) |
+| Privilege escalation (sudo/su/gosu) | Layer 3 (deny rules block all privilege escalation) |
 | Git push without approval | Layer 3 (ask rules) |
 | Symlink to /etc/passwd | Layer 4 (hook validates symlink targets) |
 
@@ -230,7 +231,18 @@ Logs every tool invocation to JSONL:
     "github.com",
     "npmjs.org",
     "pypi.org",
+    "*.pythonhosted.org",
+    "crates.io",
+    "rubygems.org",
+    "cran.r-project.org",
+    "*.cran.r-project.org",
+    "cloud.r-project.org",
+    "cran.rstudio.com",
+    "*.rstudio.com",
+    "maven.org",
     "*.amazonaws.com",
+    "*.googleapis.com",
+    "*.azure.com",
     "stackoverflow.com"
   ]
 }
@@ -239,7 +251,7 @@ Logs every tool invocation to JSONL:
 **Rationale**:
 - **Enable development**: Package registries and cloud APIs accessible
 - **Block exfiltration**: Arbitrary domains blocked (best-effort)
-- **Comprehensive list**: Covers common development needs
+- **Comprehensive coverage**: Includes CRAN mirrors, PyPI CDN, and major package ecosystems
 
 **Explicitly acknowledged limitation**: This is best-effort. An attacker could:
 - Use IP addresses instead of domains
@@ -254,24 +266,23 @@ Logs every tool invocation to JSONL:
 
 ## Cloud CLI Variants
 
-### Design Choice: Separate Images for Each Cloud
+### Design Choice: Multi-Cloud Images
 
-We provide separate images for AWS, GCP, and Azure:
-- `claude-sandbox-python-aws`
-- `claude-sandbox-python-gcp`
-- `claude-sandbox-python-azure`
-- `claude-sandbox-full` (all three)
+We provide cloud-enabled images that include all major cloud CLIs:
+- `claude-sandbox-python-cloud` (Python + AWS + GCP + Azure)
+- `claude-sandbox-r-cloud` (R + AWS + GCP + Azure)
+- `claude-sandbox-full` (Python + R + all clouds)
 
 **Rationale**:
-- **Optimization**: Teams typically use one cloud, not all three
-- **Size**: AWS CLI alone adds ~500MB
-- **Flexibility**: Choose what you need
-- **Security**: Smaller attack surface
+- **Completeness**: Support multi-cloud workflows
+- **Simplicity**: One image per language + clouds
+- **Flexibility**: All tools available when needed
+- **Reasonable size**: ~1GB additional for all cloud CLIs
 
-**Alternative considered**: Single cloud-enabled image
-- ❌ Would be 3GB+ just for cloud CLIs
-- ❌ Most users don't need all three
-- ❌ Larger images = slower pulls
+**Alternative considered**: Separate images per cloud provider
+- ❌ More images to maintain
+- ❌ Users often work with multiple clouds
+- ✅ Could revisit if size becomes problematic
 
 ## Build Strategy
 
@@ -319,12 +330,17 @@ RUN pip3 install --no-cache-dir package1 package2
 ### Design Choice: Managed vs User Settings
 
 - **Managed settings**: `/etc/claude-code/managed-settings.json` (root-owned, immutable)
+  - Source: `settings/managed-settings.json` in repository
 - **User settings**: `~/.claude/settings.json` (agent-owned, mutable)
+  - Source: `settings/settings.json` in repository
+- **Hooks**: `/home/agent/.claude/hooks/` (agent-owned, managed)
+  - Source: `settings/hooks/` in repository
 
 **Rationale**:
 - **Separation of concerns**: Security policies vs user preferences
 - **Least privilege**: Users can't override security policies
 - **Standard practice**: /etc for system-wide, ~ for user-specific
+- **Repository organization**: Settings grouped in settings/ directory
 
 **Configuration in managed settings**:
 - `allowManagedPermissionRulesOnly: true` - users can't override deny/ask rules
@@ -335,9 +351,11 @@ RUN pip3 install --no-cache-dir package1 package2
 ### Design Choice: `claude-sandbox-<variant>`
 
 Examples:
-- `claude-sandbox-base`
+- `claude-sandbox-minimal`
 - `claude-sandbox-python`
-- `claude-sandbox-python-aws`
+- `claude-sandbox-python-cloud`
+- `claude-sandbox-r-cloud`
+- `claude-sandbox-full`
 
 **Rationale**:
 - **Clarity**: Obvious what each image contains

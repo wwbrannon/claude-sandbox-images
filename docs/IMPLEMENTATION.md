@@ -7,44 +7,42 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
 ### ✅ Core Infrastructure (100% Complete)
 
 #### 1. Dockerfile Variants
-- [x] `Dockerfile.base` - Foundation with security settings and Unix toolchain
-- [x] `Dockerfile.minimal` - Alias for base image
+- [x] `Dockerfile.minimal` - Foundation with security settings and Unix toolchain
 - [x] `Dockerfile.python` - Python 3 + data science stack
 - [x] `Dockerfile.r` - R + tidyverse ecosystem
-- [x] `Dockerfile.python-aws` - Python + AWS CLI v2
-- [x] `Dockerfile.python-gcp` - Python + Google Cloud SDK
-- [x] `Dockerfile.python-azure` - Python + Azure CLI
-- [x] `Dockerfile.r-aws` - R + AWS CLI
+- [x] `Dockerfile.python-cloud` - Python + AWS + GCP + Azure CLIs
+- [x] `Dockerfile.r-cloud` - R + AWS + GCP + Azure CLIs
 - [x] `Dockerfile.full` - Python + R + all cloud CLIs
 
 #### 2. Configuration Files
-- [x] `managed-settings.json` - Enforced security policies
+- [x] `settings/managed-settings.json` - Enforced security policies
   - Default permission mode with autoAllowBashIfSandboxed
-  - Comprehensive deny rules (destructive ops, secrets, network)
+  - Comprehensive deny rules (destructive ops, secrets, network, privilege escalation including gosu)
   - Ask rules for state-changing operations (git, publishing)
   - Allow rules for safe development operations
-  - Sandbox configuration with allowedDomains
+  - Sandbox configuration with allowedDomains (including CRAN mirrors, PyPI CDN)
   - Hook configuration
   - MCP restrictions
 
-- [x] `settings.json` - User settings template
-  - Model selection and UI preferences
+- [x] `settings/settings.json` - User settings template
+  - Model selection with support for Sonnet, Opus, and Haiku
+  - UI preferences and output style
   - Project-specific allow rules
   - Environment variables
   - Cannot override managed policies
 
 #### 3. Security Hooks
-- [x] `hooks/pre-command-validator.sh` - Pre-execution validation
+- [x] `settings/hooks/pre-command-validator.sh` - Pre-execution validation
   - Command injection detection (eval, backticks, pipes)
   - Environment exfiltration prevention
   - Symlink validation for Edit operations
   - File size checks for Read operations (DoS prevention)
   - Encoded command execution detection
 
-- [x] `hooks/post-command-logger.sh` - Audit logging
+- [x] `settings/hooks/post-command-logger.sh` - Audit logging
   - JSONL audit logs with full context
   - Sensitive operation alerting (git push, npm publish)
-  - Log rotation (7 day retention)
+  - Log rotation (7 day retention via cron)
   - Separate sensitive ops log
 
 #### 4. Build Tooling
@@ -68,11 +66,11 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
   - Best practices
   - FAQ section
 
-- [x] `SANDBOX-README.md` - User guide (included in images)
+- [x] `settings/SANDBOX-README.md` - User guide (included in images)
   - What's included in each variant
   - Security model explained for users
-  - What's blocked/allowed/requires approval
-  - Network access list
+  - What's blocked/allowed/requires approval (including gosu)
+  - Network access list (including CRAN mirrors, PyPI CDN)
   - Working with the sandbox
   - Troubleshooting basics
   - Best practices for users
@@ -118,14 +116,11 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
 ### Multi-Tier Image Hierarchy
 ```
 docker/sandbox-templates:claude-code
-  └── claude-sandbox-base (~1.6GB)
-      ├── claude-sandbox-minimal (~1.6GB)
+  └── claude-sandbox-minimal (~1.6GB)
       ├── claude-sandbox-python (~2.1GB)
       ├── claude-sandbox-r (~2.1GB)
-      ├── claude-sandbox-python-aws (~2.6GB)
-      ├── claude-sandbox-python-gcp (~2.6GB)
-      ├── claude-sandbox-python-azure (~2.6GB)
-      ├── claude-sandbox-r-aws (~2.6GB)
+      ├── claude-sandbox-python-cloud (~2.6GB)
+      ├── claude-sandbox-r-cloud (~2.6GB)
       └── claude-sandbox-full (~3.6GB)
 ```
 
@@ -225,13 +220,13 @@ docker/sandbox-templates:claude-code
 docker run -it -v $(pwd):/workspace claude-sandbox-python
 ```
 
-### Python with AWS
+### Python with Cloud CLIs
 ```bash
 docker run -it -v $(pwd):/workspace \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_DEFAULT_REGION \
-  claude-sandbox-python-aws
+  claude-sandbox-python-cloud
 ```
 
 ### R Development
@@ -277,7 +272,7 @@ REGISTRY=myregistry.io ./build.sh v1.0
 - `sandbox.excludedCommands`: `["git", "docker"]`
 
 ### Network Allowed Domains
-- Package registries: npmjs.org, pypi.org, crates.io, rubygems.org, maven.org
+- Package registries: npmjs.org, pypi.org (including *.pythonhosted.org), crates.io, rubygems.org, cran.r-project.org (including CRAN mirrors and RStudio), maven.org
 - Version control: github.com, api.github.com, raw.githubusercontent.com
 - Cloud providers: *.amazonaws.com, *.googleapis.com, *.azure.com
 - Documentation: stackoverflow.com, stackexchange.com
@@ -298,30 +293,31 @@ REGISTRY=myregistry.io ./build.sh v1.0
 
 ```
 claude-sandbox/
-├── Dockerfile.base                    # Base image
-├── Dockerfile.minimal                 # Minimal variant
+├── Dockerfile.minimal                 # Base/minimal image
 ├── Dockerfile.python                  # Python variant
 ├── Dockerfile.r                       # R variant
-├── Dockerfile.python-aws              # Python + AWS
-├── Dockerfile.python-gcp              # Python + GCP
-├── Dockerfile.python-azure            # Python + Azure
-├── Dockerfile.r-aws                   # R + AWS
+├── Dockerfile.python-cloud            # Python + multi-cloud
+├── Dockerfile.r-cloud                 # R + multi-cloud
 ├── Dockerfile.full                    # Full variant
-├── managed-settings.json              # Security policies
-├── settings.json                      # User template
 ├── build.sh                           # Build script
+├── entrypoint.sh                      # Container entrypoint
 ├── README.md                          # Main docs
-├── SANDBOX-README.md                  # User guide
 ├── LICENSE                            # MIT license
 ├── .dockerignore                      # Build optimization
 ├── .gitignore                         # Git exclusions
-├── hooks/
-│   ├── pre-command-validator.sh       # Pre-execution validation
-│   └── post-command-logger.sh         # Audit logging
+├── settings/
+│   ├── managed-settings.json          # Security policies
+│   ├── settings.json                  # User template
+│   ├── logrotate-claude               # Log rotation config
+│   ├── SANDBOX-README.md              # User guide
+│   └── hooks/
+│       ├── pre-command-validator.sh   # Pre-execution validation
+│       └── post-command-logger.sh     # Audit logging
 └── docs/
     ├── ARCHITECTURE.md                # Design decisions
     ├── CUSTOMIZATION.md               # Customization guide
-    └── TROUBLESHOOTING.md             # Problem solving
+    ├── TROUBLESHOOTING.md             # Problem solving
+    └── IMPLEMENTATION.md              # Implementation summary
 ```
 
 ## Testing Plan (To Be Executed)

@@ -28,7 +28,7 @@ unable to prepare context: unable to evaluate symlinks in Dockerfile path
 Ensure you're in the repository root:
 ```bash
 cd /path/to/claude-sandbox
-ls -la Dockerfile.base  # Should exist
+ls -la Dockerfile.minimal  # Should exist
 ./build.sh
 ```
 
@@ -70,7 +70,7 @@ sudo systemctl restart docker  # Linux
 # or restart Docker Desktop on Mac/Windows
 
 # Try build with no cache
-docker build --no-cache -f Dockerfile.base -t claude-sandbox-base .
+docker build --no-cache -f Dockerfile.minimal -t claude-sandbox-minimal .
 ```
 
 ### "Package not found" errors
@@ -217,10 +217,10 @@ cat /etc/claude-code/managed-settings.json | jq '.hooks'
 **Solution**:
 ```bash
 # Make hooks executable
-chmod +x hooks/*.sh
+chmod +x settings/hooks/*.sh
 
 # Rebuild image
-docker build -f Dockerfile.base -t claude-sandbox-base .
+docker build -f Dockerfile.minimal -t claude-sandbox-minimal .
 ```
 
 ### Environment variables not visible
@@ -389,13 +389,13 @@ ERROR: /bin/bash^M: bad interpreter
 **Solution**:
 ```bash
 # Convert to Unix line endings
-dos2unix hooks/*.sh
+dos2unix settings/hooks/*.sh
 
 # Or with sed
-sed -i 's/\r$//' hooks/*.sh
+sed -i 's/\r$//' settings/hooks/*.sh
 
 # Rebuild image
-docker build -f Dockerfile.base -t claude-sandbox-base .
+docker build -f Dockerfile.minimal -t claude-sandbox-minimal .
 ```
 
 ### Audit logs filling disk
@@ -430,13 +430,13 @@ docker run -it \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_DEFAULT_REGION \
   -v $(pwd):/workspace \
-  claude-sandbox-python-aws
+  claude-sandbox-python-cloud
 
 # Or mount credentials (less secure)
 docker run -it \
   -v ~/.aws:/home/agent/.aws:ro \
   -v $(pwd):/workspace \
-  claude-sandbox-python-aws
+  claude-sandbox-python-cloud
 ```
 
 ### GCP "Application Default Credentials not found"
@@ -448,7 +448,7 @@ docker run -it \
   -v $(pwd):/workspace \
   -v /path/to/key.json:/workspace/.gcp/key.json:ro \
   -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/.gcp/key.json \
-  claude-sandbox-python-gcp
+  claude-sandbox-python-cloud
 ```
 
 ### Azure CLI "Please run 'az login'"
@@ -461,7 +461,7 @@ docker run -it \
   -e AZURE_CLIENT_ID \
   -e AZURE_CLIENT_SECRET \
   -v $(pwd):/workspace \
-  claude-sandbox-python-azure
+  claude-sandbox-python-cloud
 
 # Or do az login inside container
 docker exec -it <container-id> az login

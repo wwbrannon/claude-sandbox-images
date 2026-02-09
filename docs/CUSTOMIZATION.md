@@ -45,7 +45,7 @@ To create a completely new variant (e.g., Node.js):
 
 ```dockerfile
 # Dockerfile.nodejs
-FROM claude-sandbox-base
+FROM claude-sandbox-minimal
 
 USER root
 
@@ -273,7 +273,7 @@ exit 0
 ### System Packages
 
 ```dockerfile
-FROM claude-sandbox-base
+FROM claude-sandbox-minimal
 
 USER root
 
@@ -304,7 +304,7 @@ USER agent
 ### Binary Downloads
 
 ```dockerfile
-FROM claude-sandbox-base
+FROM claude-sandbox-minimal
 
 USER root
 
@@ -522,7 +522,7 @@ echo "All tests passed!"
 
 ```dockerfile
 # Build stage
-FROM claude-sandbox-base AS builder
+FROM claude-sandbox-minimal AS builder
 
 USER root
 
@@ -532,7 +532,7 @@ WORKDIR /build
 RUN make
 
 # Runtime stage
-FROM claude-sandbox-base
+FROM claude-sandbox-minimal
 
 USER root
 COPY --from=builder /build/output /usr/local/bin/
@@ -568,6 +568,7 @@ node_modules/
 __pycache__/
 *.pyc
 .pytest_cache/
+settings/
 ```
 
 ### 4. Version Pin for Reproducibility
@@ -586,6 +587,8 @@ Add a README to your custom image:
 ```dockerfile
 COPY CUSTOM-README.md /home/agent/CUSTOMIZATIONS.md
 ```
+
+**Note**: The settings/ directory in the repository contains the configuration files that are copied into images during build.
 
 ## Troubleshooting
 
