@@ -1,5 +1,8 @@
 # Claude Code Sandbox Docker Images
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub issues](https://img.shields.io/github/issues/wwbrannon/claude-sandbox-images)](https://github.com/wwbrannon/claude-sandbox-images/issues)
+
 Lightweight, secure Docker images for running Claude Code in sandboxed environments with defense-in-depth security architecture.
 
 ## Overview
