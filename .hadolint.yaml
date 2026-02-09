@@ -1,0 +1,8 @@
+ignored:
+  - DL3008  # pin apt versions — impractical for rolling base image
+  - DL3013  # pin pip versions — same reason
+  - DL3006  # tag base image — claude-sandbox-minimal is a local image
+  - DL4006  # pipefail before pipe — curl|gpg idiom; curl -fsLS already fails on error
+  - DL3002  # last USER not root — entrypoint.sh handles user switching
+  - DL3059  # consecutive RUN — intentional for readability
+  - SC2174  # -m with -p — only deepest dir matters here, which is correct
