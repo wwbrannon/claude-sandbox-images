@@ -4,19 +4,6 @@ Common issues and solutions for Claude Code Sandbox images.
 
 ## Build Issues
 
-### "Permission denied" when running build.sh
-
-**Symptom**:
-```
-bash: ./build.sh: Permission denied
-```
-
-**Solution**:
-```bash
-chmod +x build.sh
-./build.sh
-```
-
 ### "No such file or directory" for Dockerfile
 
 **Symptom**:
@@ -29,7 +16,7 @@ Ensure you're in the repository root:
 ```bash
 cd /path/to/claude-sandbox
 ls -la Dockerfile.minimal  # Should exist
-./build.sh
+make build
 ```
 
 ### "Cannot find base image ubuntu:noble"
@@ -312,7 +299,7 @@ docker run -it --dns 8.8.8.8 --dns 8.8.4.4 claude-sandbox-minimal
 
 # Use BuildKit for better caching
 export DOCKER_BUILDKIT=1
-./build.sh
+make build
 ```
 
 ### Container is slow at runtime
@@ -605,7 +592,7 @@ docker run --rm -it claude-sandbox-minimal
 
 **Solution**: Build locally first:
 ```bash
-./build.sh
+make build
 ```
 
 ---

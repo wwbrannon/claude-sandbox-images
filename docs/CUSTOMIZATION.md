@@ -594,10 +594,9 @@ COPY CUSTOM-README.md /home/agent/CUSTOMIZATIONS.md
 
 ### "Permission denied" when building
 
-Make sure scripts are executable:
+Make sure hook scripts are executable:
 ```bash
 chmod +x hooks/*.sh
-chmod +x build.sh
 ```
 
 ### "Package not found" errors

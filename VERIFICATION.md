@@ -9,22 +9,21 @@ This document provides a systematic checklist for verifying the Claude Code Sand
 - [ ] Configuration files exist (managed-settings.json, settings.json)
 - [ ] Hook scripts exist and are executable (pre-command-validator.sh, post-command-logger.sh)
 - [ ] Documentation exists (README.md, SANDBOX-README.md, docs/*.md)
-- [ ] Build script exists and is executable (build.sh)
+- [ ] Makefile exists
 - [ ] Supporting files exist (.dockerignore, .gitignore, LICENSE)
 
 ```bash
 # Quick check
-ls -la Dockerfile.* hooks/*.sh build.sh managed-settings.json settings.json
-ls -la docs/*.md README.md SANDBOX-README.md
+ls -la Dockerfile.* hooks/*.sh Makefile settings/managed-settings.json settings/settings.json
+ls -la docs/*.md README.md settings/SANDBOX-README.md
 ```
 
 ### ✅ File Permissions
-- [ ] build.sh is executable (`-rwxr-xr-x`)
 - [ ] Hook scripts are executable (`-rwxr-xr-x`)
 
 ```bash
 # Verify
-ls -l build.sh hooks/*.sh
+ls -l hooks/*.sh
 # Should show 'x' permission
 ```
 
@@ -112,18 +111,17 @@ docker run --rm claude-sandbox-r:test R --version
 docker run --rm claude-sandbox-r:test R -e "installed.packages()[,c('Package')]" | grep -E "tidyverse|ggplot2"
 ```
 
-### ✅ Build Script
-- [ ] Build script runs without errors
+### ✅ Makefile Build
+- [ ] `make build` runs without errors
 - [ ] All variants build successfully
 - [ ] Images are tagged with version and latest
-- [ ] Build summary shows correct sizes
 
 ```bash
 # Full build
-./build.sh test
+make build VERSION=test
 
 # Check all images
-docker images | grep claude-sandbox
+make list
 ```
 
 ## Configuration Verification

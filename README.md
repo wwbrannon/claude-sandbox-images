@@ -67,27 +67,31 @@ docker run -it -v $(pwd):/workspace \
 
 ## Building Images
 
-### Build All Variants
-
 ```bash
-# Build with version tag
-./build.sh v1.0
+# Build all images (minimal first, then r)
+make build
 
-# Build latest
-./build.sh
+# Build a single variant (r will build minimal first as a dependency)
+make build IMAGE=minimal
+make build IMAGE=r
 
-# Build and push to registry
-REGISTRY=myregistry.io ./build.sh v1.0
+# Build with a specific version tag
+make build VERSION=v2.0
+
+# Build and push to a registry
+make push REGISTRY=ghcr.io/youruser VERSION=v2.0
 ```
 
-### Build Single Variant
+### Other Targets
 
 ```bash
-# Build minimal image first (required as base for r)
-docker build -f Dockerfile.minimal -t claude-sandbox-minimal:v1.0 .
-
-# Build R variant (depends on claude-sandbox-minimal)
-docker build -f Dockerfile.r -t claude-sandbox-r:v1.0 .
+make lint      # ShellCheck, hadolint, JSON validation
+make test      # Smoke tests against built images
+make scan      # Trivy CVE scan
+make list      # Show built images
+make clean     # Remove built images
+make shell             # Drop into a minimal container
+make shell IMAGE=r     # Drop into an R container
 ```
 
 ## Security Model

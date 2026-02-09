@@ -286,18 +286,20 @@ All major cloud CLIs and SDKs are included in `claude-sandbox-minimal`:
 ### Design Choice: Sequential Two-Stage Build
 
 ```bash
-./build.sh
+make build
 ```
 
 1. Build `claude-sandbox-minimal` from `ubuntu:noble`
 2. Build `claude-sandbox-r` from `claude-sandbox-minimal`
 3. Tag with version and latest
-4. Optional: push to registry
+
+Make's dependency graph naturally enforces the build order (`build-r` depends on `build-minimal`). The Makefile also provides `lint`, `test`, `scan`, `push`, and other targets — run `make help` or see the Makefile for the full list.
 
 **Rationale**:
 - **Simplicity**: Two sequential builds are straightforward and easy to debug
 - **Correctness**: Each image depends on the previous one
 - **Speed**: Only two images to build, so parallelism is unnecessary
+- **Local + CI parity**: The same `make` targets run locally and in GitHub Actions
 
 ### Dockerfile Optimization
 

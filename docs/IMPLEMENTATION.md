@@ -42,13 +42,14 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
   - Separate sensitive ops log
 
 #### 4. Build Tooling
-- [x] `build.sh` - Automated build script
-  - Builds minimal image first, then r variant
+- [x] `Makefile` - Build orchestration
+  - `make build` builds minimal image first, then r variant
   - Proper version tagging (VERSION + latest)
-  - Registry tagging support
-  - Image size reporting
-  - Colored output and progress tracking
-  - Error handling and build summary
+  - `make push` for registry tagging and push
+  - `make lint` for ShellCheck, hadolint, JSON validation
+  - `make test` for smoke tests against built images
+  - `make scan` for Trivy CVE scanning
+  - `make clean`, `make list`, `make shell` helpers
 
 #### 5. Documentation
 - [x] `README.md` - Main repository documentation
@@ -237,19 +238,18 @@ USER agent
 
 ### Build All Images
 ```bash
-./build.sh v1.0
+make build VERSION=v1.0
 ```
 
 ### Build Single Variant
 ```bash
-docker build -f Dockerfile.minimal -t claude-sandbox-minimal:v1.0 .
-# or
-docker build -f Dockerfile.r -t claude-sandbox-r:v1.0 .
+make build-minimal VERSION=v1.0
+make build-r VERSION=v1.0
 ```
 
-### Build with Registry Push
+### Push to Registry
 ```bash
-REGISTRY=myregistry.io ./build.sh v1.0
+make push REGISTRY=ghcr.io/youruser VERSION=v1.0
 ```
 
 ## Configuration Deep Dive
@@ -288,7 +288,7 @@ REGISTRY=myregistry.io ./build.sh v1.0
 claude-sandbox/
 ├── Dockerfile.minimal                 # Foundation image (FROM ubuntu:noble)
 ├── Dockerfile.r                       # R variant (FROM minimal)
-├── build.sh                           # Build script
+├── Makefile                           # Build orchestration
 ├── entrypoint.sh                      # Container entrypoint
 ├── README.md                          # Main docs
 ├── LICENSE                            # MIT license
@@ -338,7 +338,7 @@ The implementation is complete. The following verification steps should be perfo
 
 ## Next Steps
 
-1. **Build the images**: Run `./build.sh v1.0` to build all variants
+1. **Build the images**: Run `make build VERSION=v1.0` to build all variants
 2. **Test thoroughly**: Execute the verification plan
 3. **Iterate on feedback**: Adjust based on testing results
 4. **Publish to registry** (optional): Push images for distribution
