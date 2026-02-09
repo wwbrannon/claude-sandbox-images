@@ -32,20 +32,20 @@ ls -la Dockerfile.minimal  # Should exist
 ./build.sh
 ```
 
-### "Cannot find image docker/sandbox-templates:claude-code"
+### "Cannot find base image ubuntu:noble"
 
 **Symptom**:
 ```
-Error response from daemon: manifest for docker/sandbox-templates:claude-code not found
+Error response from daemon: manifest for ubuntu:noble not found
 ```
 
 **Solution**:
-Pull the upstream base image first:
+Pull the base image first:
 ```bash
-docker pull docker/sandbox-templates:claude-code
+docker pull ubuntu:noble
 ```
 
-Or create an account at https://www.docker.com/ and authenticate.
+If you are behind a corporate proxy or firewall, ensure Docker Hub is accessible. You may also need to authenticate with `docker login`.
 
 ### Build hangs during "Fetching..."
 
@@ -107,7 +107,7 @@ bash: /workspace/script.sh: Permission denied
 chmod +x script.sh
 
 # On Linux with SELinux, add :z flag
-docker run -it -v $(pwd):/workspace:z claude-sandbox-python
+docker run -it -v $(pwd):/workspace:z claude-sandbox-minimal
 
 # Or disable SELinux for testing (not recommended for production)
 sudo setenforce 0
@@ -124,10 +124,10 @@ ls: cannot access '/workspace': No such file or directory
 Ensure volume is mounted correctly:
 ```bash
 # Use absolute path
-docker run -it -v /absolute/path/to/project:/workspace claude-sandbox-python
+docker run -it -v /absolute/path/to/project:/workspace claude-sandbox-minimal
 
 # Or use $(pwd) for current directory
-docker run -it -v $(pwd):/workspace claude-sandbox-python
+docker run -it -v $(pwd):/workspace claude-sandbox-minimal
 ```
 
 ### "Operation not permitted" for certain commands
@@ -188,7 +188,7 @@ docker exec <container-id> ls -la /home/agent/.claude/
 # Use :ro flag for read-only mount
 docker run -it \
   -v $(pwd)/my-settings.json:/home/agent/.claude/settings.json:ro \
-  claude-sandbox-python
+  claude-sandbox-minimal
 
 # Ensure file exists on host before starting container
 test -f my-settings.json || echo "File missing!"
@@ -237,10 +237,10 @@ docker exec <container-id> env | grep MY_VAR
 **Solution**:
 ```bash
 # Pass explicitly with -e
-docker run -it -e MY_VAR=value claude-sandbox-python
+docker run -it -e MY_VAR=value claude-sandbox-minimal
 
 # Or use --env-file
-docker run -it --env-file .env.docker claude-sandbox-python
+docker run -it --env-file .env.docker claude-sandbox-minimal
 ```
 
 ## Network Issues
@@ -290,10 +290,10 @@ Could not resolve host: github.com
 **Solution**:
 ```bash
 # Use host network mode (reduces isolation)
-docker run -it --network host claude-sandbox-python
+docker run -it --network host claude-sandbox-minimal
 
 # Or specify DNS servers
-docker run -it --dns 8.8.8.8 --dns 8.8.4.4 claude-sandbox-python
+docker run -it --dns 8.8.8.8 --dns 8.8.4.4 claude-sandbox-minimal
 ```
 
 ## Performance Issues
@@ -302,15 +302,11 @@ docker run -it --dns 8.8.8.8 --dns 8.8.4.4 claude-sandbox-python
 
 **Possible causes**:
 1. No layer caching
-2. Building sequentially instead of in parallel
-3. Slow network
-4. Insufficient resources
+2. Slow network
+3. Insufficient resources
 
 **Solutions**:
 ```bash
-# Use parallel builds (requires GNU parallel)
-./build.sh
-
 # Increase Docker resources (Docker Desktop)
 # Settings → Resources → Increase CPUs and Memory
 
@@ -334,12 +330,12 @@ docker run -it \
   --cpus=4 \
   --memory=8g \
   -v $(pwd):/workspace \
-  claude-sandbox-python
+  claude-sandbox-minimal
 
 # Check if disk I/O is bottleneck
 docker run -it \
   -v $(pwd):/workspace:cached \
-  claude-sandbox-python  # macOS/Windows only
+  claude-sandbox-minimal  # macOS/Windows only
 ```
 
 ### Large image sizes
@@ -350,10 +346,10 @@ Images are larger than expected
 **Diagnostic**:
 ```bash
 # Check layer sizes
-docker history claude-sandbox-python
+docker history claude-sandbox-minimal
 
 # Find largest layers
-docker history claude-sandbox-python --no-trunc | sort -k2 -h
+docker history claude-sandbox-minimal --no-trunc | sort -k2 -h
 ```
 
 **Solutions**:
@@ -430,13 +426,13 @@ docker run -it \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_DEFAULT_REGION \
   -v $(pwd):/workspace \
-  claude-sandbox-python-cloud
+  claude-sandbox-minimal
 
 # Or mount credentials (less secure)
 docker run -it \
   -v ~/.aws:/home/agent/.aws:ro \
   -v $(pwd):/workspace \
-  claude-sandbox-python-cloud
+  claude-sandbox-minimal
 ```
 
 ### GCP "Application Default Credentials not found"
@@ -448,7 +444,7 @@ docker run -it \
   -v $(pwd):/workspace \
   -v /path/to/key.json:/workspace/.gcp/key.json:ro \
   -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/.gcp/key.json \
-  claude-sandbox-python-cloud
+  claude-sandbox-minimal
 ```
 
 ### Azure CLI "Please run 'az login'"
@@ -461,7 +457,7 @@ docker run -it \
   -e AZURE_CLIENT_ID \
   -e AZURE_CLIENT_SECRET \
   -v $(pwd):/workspace \
-  claude-sandbox-python-cloud
+  claude-sandbox-minimal
 
 # Or do az login inside container
 docker exec -it <container-id> az login
@@ -560,7 +556,7 @@ uname -a
 
 # Image info
 docker images | grep claude-sandbox
-docker history claude-sandbox-python
+docker history claude-sandbox-minimal
 
 # Container info
 docker ps -a
@@ -600,7 +596,7 @@ cat /etc/claude-code/managed-settings.json | jq .
 docker rm <container-name>
 
 # Or use --rm flag for auto-cleanup
-docker run --rm -it claude-sandbox-python
+docker run --rm -it claude-sandbox-minimal
 ```
 
 ### "pull access denied for claude-sandbox-base"

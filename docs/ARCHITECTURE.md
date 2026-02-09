@@ -4,32 +4,29 @@ This document explains the architectural choices and design rationale for the Cl
 
 ## Multi-Tier Architecture
 
-### Design Choice: Base + Specialized Children
+### Design Choice: Two-Tier Simplified Hierarchy
 
-We chose a multi-tier architecture with a base image and specialized child images:
+We chose a simplified two-tier architecture built directly on Ubuntu:
 
 ```
-docker/sandbox-templates:claude-code (upstream)
-  └── claude-sandbox-minimal (our base)
-      ├── claude-sandbox-python
-      ├── claude-sandbox-r
-      ├── claude-sandbox-python-cloud
-      ├── claude-sandbox-r-cloud
-      └── claude-sandbox-full
+ubuntu:noble (24.04 LTS)
+  └── claude-sandbox-minimal (Python + cloud CLIs + dev tools + Claude Code)
+        └── claude-sandbox-r (+ R ecosystem)
 ```
 
 **Rationale**:
-- **Avoid duplication**: Security configuration, hooks, and base tools defined once
-- **Flexibility**: Teams choose the variant that matches their needs
-- **Optimization**: Each variant is optimized for its use case (no bloat)
-- **Maintainability**: Updates to security policies propagate to all variants
-- **Docker best practices**: Follows standard multi-stage build patterns
+- **Simplicity**: Two images are easier to build, test, and maintain than six
+- **Self-contained base**: Building from `ubuntu:noble` gives us full control over the stack without depending on upstream sandbox templates
+- **Batteries included**: The minimal image ships with Python 3, data science packages, all major cloud CLIs (AWS CLI v2, gcloud, az), cloud Python SDKs (boto3, azure-*, google-cloud-*), and dev tools -- covering the vast majority of use cases
+- **Avoid duplication**: Security configuration, hooks, and base tools defined once in minimal
+- **Maintainability**: Updates to security policies propagate to all images
+- **Docker best practices**: Follows standard layered build patterns
 
-**Alternative considered**: Single "kitchen sink" image
-- ❌ Would be 5+ GB
-- ❌ Most users wouldn't need all tools
-- ❌ Slower build times
-- ❌ More attack surface
+**Alternative considered**: Many specialized variants (python, python-cloud, r-cloud, full)
+- ❌ More images to build, tag, and publish
+- ❌ Cloud CLIs are commonly needed regardless of language
+- ❌ Users had to choose between too many options
+- ❌ Parallel build complexity for marginal size savings
 
 ## Security Architecture
 
@@ -264,43 +261,43 @@ Logs every tool invocation to JSONL:
 - ✅ Low overhead
 - ✅ Clear intent (allowlist documents expected access)
 
-## Cloud CLI Variants
+## Cloud CLIs in Minimal
 
-### Design Choice: Multi-Cloud Images
+### Design Choice: Cloud Tools Included by Default
 
-We provide cloud-enabled images that include all major cloud CLIs:
-- `claude-sandbox-python-cloud` (Python + AWS + GCP + Azure)
-- `claude-sandbox-r-cloud` (R + AWS + GCP + Azure)
-- `claude-sandbox-full` (Python + R + all clouds)
+All major cloud CLIs and SDKs are included in `claude-sandbox-minimal`:
+- **AWS**: AWS CLI v2, boto3
+- **GCP**: gcloud CLI, google-cloud-* Python SDKs
+- **Azure**: az CLI, azure-* Python SDKs
 
 **Rationale**:
-- **Completeness**: Support multi-cloud workflows
-- **Simplicity**: One image per language + clouds
-- **Flexibility**: All tools available when needed
-- **Reasonable size**: ~1GB additional for all cloud CLIs
+- **Common need**: Cloud interaction is required in the majority of workflows
+- **Eliminates choice paralysis**: No need to decide between "cloud" and "non-cloud" variants
+- **Multi-cloud by default**: Support multi-cloud workflows out of the box
+- **Reasonable size**: Cloud CLIs add manageable overhead to the base image
 
-**Alternative considered**: Separate images per cloud provider
-- ❌ More images to maintain
-- ❌ Users often work with multiple clouds
-- ✅ Could revisit if size becomes problematic
+**Alternative considered**: Separate cloud variant images
+- ❌ More images to build and maintain
+- ❌ Users almost always need cloud access
+- ❌ Added complexity with minimal size savings
 
 ## Build Strategy
 
-### Design Choice: Base First, Then Parallel
+### Design Choice: Sequential Two-Stage Build
 
 ```bash
 ./build.sh
 ```
 
-1. Build base image (serial)
-2. Build all variants (parallel with GNU parallel)
+1. Build `claude-sandbox-minimal` from `ubuntu:noble`
+2. Build `claude-sandbox-r` from `claude-sandbox-minimal`
 3. Tag with version and latest
 4. Optional: push to registry
 
 **Rationale**:
-- **Efficiency**: Parallel builds reduce total time
-- **Correctness**: Base must complete before variants
-- **Flexibility**: Works with or without GNU parallel
+- **Simplicity**: Two sequential builds are straightforward and easy to debug
+- **Correctness**: Each image depends on the previous one
+- **Speed**: Only two images to build, so parallelism is unnecessary
 
 ### Dockerfile Optimization
 
@@ -350,37 +347,32 @@ RUN pip3 install --no-cache-dir package1 package2
 
 ### Design Choice: `claude-sandbox-<variant>`
 
-Examples:
-- `claude-sandbox-minimal`
-- `claude-sandbox-python`
-- `claude-sandbox-python-cloud`
-- `claude-sandbox-r-cloud`
-- `claude-sandbox-full`
+Images:
+- `claude-sandbox-minimal` -- Python, cloud CLIs/SDKs, dev tools, Claude Code
+- `claude-sandbox-r` -- Everything in minimal, plus the R ecosystem
 
 **Rationale**:
 - **Clarity**: Obvious what each image contains
 - **Consistency**: All images in same namespace
-- **Flexibility**: Easy to add new variants
 - **Docker conventions**: Hyphenated names, descriptive suffixes
 
 ## Key Takeaways
 
-1. **Multi-tier architecture** avoids duplication while maximizing flexibility
+1. **Two-tier architecture** keeps things simple while covering the vast majority of use cases
 2. **Four security layers** provide defense-in-depth against different threats
 3. **Permission mode balances security and UX** via auto-allow for sandboxed commands
 4. **Hooks complement rules** for dynamic validation that static rules can't express
 5. **Network filtering is best-effort** but included for defense-in-depth
-6. **Cloud variants optimize for common use cases** without bloat
-7. **Build strategy uses parallelism** for efficiency while ensuring correctness
+6. **Cloud CLIs included by default** because most workflows need cloud access
+7. **Sequential build** is simple and sufficient for two images
 
 ## Future Enhancements
 
 Potential improvements for future versions:
 
-1. **Additional language variants**: Node.js, Go, Rust
-2. **More sophisticated hooks**: Python hooks for complex validation
-3. **Metrics and monitoring**: Export metrics to observability platforms
-4. **Custom sandbox profiles**: Per-project sandbox configurations
-5. **Secret detection**: Scan for accidentally committed secrets
-6. **Network proxy support**: Route sandbox traffic through proxy
-7. **GPU support**: Variants with CUDA for ML workloads
+1. **More sophisticated hooks**: Python hooks for complex validation
+2. **Metrics and monitoring**: Export metrics to observability platforms
+3. **Custom sandbox profiles**: Per-project sandbox configurations
+4. **Secret detection**: Scan for accidentally committed secrets
+5. **Network proxy support**: Route sandbox traffic through proxy
+6. **GPU support**: Variants with CUDA for ML workloads

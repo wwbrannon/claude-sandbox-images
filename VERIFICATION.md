@@ -5,7 +5,7 @@ This document provides a systematic checklist for verifying the Claude Code Sand
 ## Pre-Build Verification
 
 ### ✅ File Existence
-- [ ] All Dockerfiles exist (base, minimal, python, r, python-aws, python-gcp, python-azure, r-aws, full)
+- [ ] All Dockerfiles exist (Dockerfile.minimal, Dockerfile.r)
 - [ ] Configuration files exist (managed-settings.json, settings.json)
 - [ ] Hook scripts exist and are executable (pre-command-validator.sh, post-command-logger.sh)
 - [ ] Documentation exists (README.md, SANDBOX-README.md, docs/*.md)
@@ -52,7 +52,6 @@ jq . managed-settings.json | head -20
 - [ ] Docker is installed and running
 - [ ] Docker version is 20.10 or later
 - [ ] Sufficient disk space (>10GB free)
-- [ ] Upstream base image is accessible
 
 ```bash
 # Check Docker
@@ -62,45 +61,48 @@ docker info
 # Check disk space
 df -h
 
-# Pull upstream base (if needed)
-docker pull docker/sandbox-templates:claude-code
+# Base image is ubuntu:noble (24.04 LTS), pulled automatically during build
 ```
 
-### ✅ Base Image Build
-- [ ] Base image builds without errors
-- [ ] Base image size is approximately 1.5-1.7GB
-- [ ] Base image is tagged with version and latest
-
-```bash
-# Build base
-docker build -f Dockerfile.base -t claude-sandbox-base:test .
-
-# Check size
-docker images claude-sandbox-base:test
-
-# Inspect
-docker inspect claude-sandbox-base:test
-```
-
-### ✅ Variant Image Builds
-Test each variant individually:
-
-#### Python Variant
-- [ ] Builds without errors
-- [ ] Size is approximately 2.0-2.2GB
+### ✅ Minimal Image Build
+- [ ] Minimal image builds without errors (FROM ubuntu:noble)
+- [ ] Minimal image size is reasonable
+- [ ] Minimal image is tagged with version and latest
 - [ ] Python 3 is installed
 - [ ] Pip packages installed (pytest, black, pandas, jupyter)
+- [ ] Cloud CLIs installed (aws, gcloud, az)
+- [ ] Dev tools installed (gcc, make, git, ripgrep, etc.)
+- [ ] Claude Code is installed
 
 ```bash
-docker build -f Dockerfile.python -t claude-sandbox-python:test .
-docker images claude-sandbox-python:test
-docker run --rm claude-sandbox-python:test python3 --version
-docker run --rm claude-sandbox-python:test pip3 list | grep -E "pytest|black|pandas"
+# Build minimal
+docker build -f Dockerfile.minimal -t claude-sandbox-minimal:test .
+
+# Check size
+docker images claude-sandbox-minimal:test
+
+# Inspect
+docker inspect claude-sandbox-minimal:test
+
+# Verify Python
+docker run --rm claude-sandbox-minimal:test python3 --version
+docker run --rm claude-sandbox-minimal:test pip3 list | grep -E "pytest|black|pandas"
+
+# Verify cloud CLIs
+docker run --rm claude-sandbox-minimal:test aws --version
+docker run --rm claude-sandbox-minimal:test gcloud --version
+docker run --rm claude-sandbox-minimal:test az --version
+
+# Verify dev tools
+docker run --rm claude-sandbox-minimal:test bash -c "
+  gcc --version | head -1 && make --version | head -1 &&
+  git --version && gh --version | head -1 &&
+  rg --version | head -1 && jq --version
+"
 ```
 
-#### R Variant
-- [ ] Builds without errors
-- [ ] Size is approximately 2.0-2.2GB
+### ✅ R Variant Build
+- [ ] Builds without errors (FROM claude-sandbox-minimal)
 - [ ] R is installed
 - [ ] R packages installed (tidyverse, ggplot2)
 
@@ -108,31 +110,6 @@ docker run --rm claude-sandbox-python:test pip3 list | grep -E "pytest|black|pan
 docker build -f Dockerfile.r -t claude-sandbox-r:test .
 docker run --rm claude-sandbox-r:test R --version
 docker run --rm claude-sandbox-r:test R -e "installed.packages()[,c('Package')]" | grep -E "tidyverse|ggplot2"
-```
-
-#### Cloud Variants
-- [ ] python-aws builds (~2.6GB) with AWS CLI v2
-- [ ] python-gcp builds (~2.6GB) with gcloud
-- [ ] python-azure builds (~2.6GB) with az CLI
-- [ ] r-aws builds (~2.6GB) with AWS CLI
-- [ ] full builds (~3.5-4GB) with all CLIs
-
-```bash
-# AWS
-docker build -f Dockerfile.python-aws -t claude-sandbox-python-aws:test .
-docker run --rm claude-sandbox-python-aws:test aws --version
-
-# GCP
-docker build -f Dockerfile.python-gcp -t claude-sandbox-python-gcp:test .
-docker run --rm claude-sandbox-python-gcp:test gcloud --version
-
-# Azure
-docker build -f Dockerfile.python-azure -t claude-sandbox-python-azure:test .
-docker run --rm claude-sandbox-python-azure:test az --version
-
-# Full
-docker build -f Dockerfile.full -t claude-sandbox-full:test .
-docker run --rm claude-sandbox-full:test bash -c "python3 --version && R --version && aws --version"
 ```
 
 ### ✅ Build Script
@@ -160,7 +137,7 @@ Start a container and verify:
 
 ```bash
 # Start container
-docker run -d --name test-container claude-sandbox-base:test sleep 300
+docker run -d --name test-container claude-sandbox-minimal:test sleep 300
 
 # Verify managed settings
 docker exec test-container test -f /etc/claude-code/managed-settings.json && echo "EXISTS"
@@ -182,8 +159,8 @@ docker stop test-container && docker rm test-container
 - [ ] File is valid JSON
 
 ```bash
-docker run --rm claude-sandbox-base:test cat /home/agent/.claude/settings.json | jq .
-docker run --rm claude-sandbox-base:test ls -l /home/agent/.claude/settings.json
+docker run --rm claude-sandbox-minimal:test cat /home/agent/.claude/settings.json | jq .
+docker run --rm claude-sandbox-minimal:test ls -l /home/agent/.claude/settings.json
 ```
 
 ### ✅ Hook Scripts
@@ -194,9 +171,9 @@ docker run --rm claude-sandbox-base:test ls -l /home/agent/.claude/settings.json
 - [ ] Hooks directory and logs directory exist
 
 ```bash
-docker run --rm claude-sandbox-base:test ls -la /home/agent/.claude/hooks/
-docker run --rm claude-sandbox-base:test test -x /home/agent/.claude/hooks/pre-command-validator.sh && echo "EXECUTABLE"
-docker run --rm claude-sandbox-base:test test -d /home/agent/.claude/logs && echo "LOGS DIR EXISTS"
+docker run --rm claude-sandbox-minimal:test ls -la /home/agent/.claude/hooks/
+docker run --rm claude-sandbox-minimal:test test -x /home/agent/.claude/hooks/pre-command-validator.sh && echo "EXECUTABLE"
+docker run --rm claude-sandbox-minimal:test test -d /home/agent/.claude/logs && echo "LOGS DIR EXISTS"
 ```
 
 ### ✅ User Guide
@@ -204,7 +181,7 @@ docker run --rm claude-sandbox-base:test test -d /home/agent/.claude/logs && ech
 - [ ] File is readable by agent user
 
 ```bash
-docker run --rm claude-sandbox-base:test cat /home/agent/README.md | head -20
+docker run --rm claude-sandbox-minimal:test cat /home/agent/README.md | head -20
 ```
 
 ## Functionality Verification
@@ -219,7 +196,7 @@ Test hooks manually:
 
 ```bash
 # Start container
-docker run -it --name test-hooks claude-sandbox-base:test bash
+docker run -it --name test-hooks claude-sandbox-minimal:test bash
 
 # Inside container:
 # Test 1: Safe command (should exit 0)
@@ -247,7 +224,7 @@ docker rm test-hooks
 - [ ] Timestamps are present
 
 ```bash
-docker run -it --name test-logger claude-sandbox-base:test bash
+docker run -it --name test-logger claude-sandbox-minimal:test bash
 
 # Inside container:
 # Create test log
@@ -273,7 +250,7 @@ Verify all base tools are installed:
 
 ```bash
 # Test in one command
-docker run --rm claude-sandbox-base:test bash -c "
+docker run --rm claude-sandbox-minimal:test bash -c "
   echo 'Build tools:' && gcc --version | head -1 && make --version | head -1 &&
   echo 'Git:' && git --version &&
   echo 'GitHub CLI:' && gh --version | head -1 &&
@@ -295,7 +272,7 @@ This requires running Claude Code inside the container:
 
 ```bash
 # Start container with project
-docker run -it -v $(pwd):/workspace claude-sandbox-python:test
+docker run -it -v $(pwd):/workspace claude-sandbox-minimal:test
 
 # Inside container, start Claude Code and test:
 # - Try: rm -rf /tmp/test (should be denied)
@@ -315,7 +292,7 @@ Verify sandbox is enabled and configured:
 - [ ] `allowedDomains` list is present
 
 ```bash
-docker run --rm claude-sandbox-base:test jq '.sandbox' /etc/claude-code/managed-settings.json
+docker run --rm claude-sandbox-minimal:test jq '.sandbox' /etc/claude-code/managed-settings.json
 ```
 
 ## Integration Verification
@@ -331,7 +308,7 @@ mkdir -p /tmp/test-project
 echo "test content" > /tmp/test-project/test.txt
 
 # Mount and test
-docker run --rm -v /tmp/test-project:/workspace claude-sandbox-base:test bash -c "
+docker run --rm -v /tmp/test-project:/workspace claude-sandbox-minimal:test bash -c "
   ls -la /workspace &&
   cat /workspace/test.txt &&
   echo 'written by container' > /workspace/output.txt &&
@@ -350,7 +327,7 @@ rm -rf /tmp/test-project
 - [ ] User can set custom env vars
 
 ```bash
-docker run --rm -e TEST_VAR=hello -e ANOTHER_VAR=world claude-sandbox-base:test bash -c "
+docker run --rm -e TEST_VAR=hello -e ANOTHER_VAR=world claude-sandbox-minimal:test bash -c "
   echo TEST_VAR=\$TEST_VAR &&
   echo ANOTHER_VAR=\$ANOTHER_VAR
 "
@@ -362,10 +339,10 @@ docker run --rm -e TEST_VAR=hello -e ANOTHER_VAR=world claude-sandbox-base:test 
 
 ```bash
 # Test allowed domain
-docker run --rm claude-sandbox-base:test curl -I https://github.com
+docker run --rm claude-sandbox-minimal:test curl -I https://github.com
 
 # Test package registry
-docker run --rm claude-sandbox-python:test pip3 install --dry-run requests
+docker run --rm claude-sandbox-minimal:test pip3 install --dry-run requests
 ```
 
 ## End-to-End Verification
@@ -386,7 +363,7 @@ Simulate a realistic development workflow:
 cd /path/to/your/project
 
 # Start container
-docker run -it -v $(pwd):/workspace claude-sandbox-python:test bash
+docker run -it -v $(pwd):/workspace claude-sandbox-minimal:test bash
 
 # Inside container:
 ls -la
@@ -407,14 +384,8 @@ Compare actual sizes to estimates:
 
 | Image | Estimated | Actual | Status |
 |-------|-----------|--------|--------|
-| base | ~1.6GB | TBD | [ ] |
-| python | ~2.1GB | TBD | [ ] |
-| r | ~2.1GB | TBD | [ ] |
-| python-aws | ~2.6GB | TBD | [ ] |
-| python-gcp | ~2.6GB | TBD | [ ] |
-| python-azure | ~2.6GB | TBD | [ ] |
-| r-aws | ~2.6GB | TBD | [ ] |
-| full | ~3.6GB | TBD | [ ] |
+| minimal | ~3.0GB | TBD | [ ] |
+| r | ~3.5GB | TBD | [ ] |
 
 ```bash
 docker images | grep claude-sandbox | awk '{print $1,$2,$7}'
@@ -427,10 +398,10 @@ docker images | grep claude-sandbox | awk '{print $1,$2,$7}'
 
 ```bash
 # Check layer count (should be reasonable, not excessive)
-docker history claude-sandbox-base:test
+docker history claude-sandbox-minimal:test
 
 # Check for large layers
-docker history claude-sandbox-base:test --no-trunc | sort -k4 -h
+docker history claude-sandbox-minimal:test --no-trunc | sort -k4 -h
 ```
 
 ### ✅ Security Scan (Optional)
@@ -438,10 +409,10 @@ If you have security scanning tools:
 
 ```bash
 # Using Trivy (if installed)
-trivy image claude-sandbox-base:test
+trivy image claude-sandbox-minimal:test
 
 # Using Docker Scout (if available)
-docker scout cves claude-sandbox-base:test
+docker scout cves claude-sandbox-minimal:test
 ```
 
 ## Documentation Verification
@@ -498,11 +469,8 @@ Tested by: _____________
 Version: _____________
 
 ### Build Results
-- Base image: ✅ / ❌
-- Python variant: ✅ / ❌
+- Minimal image: ✅ / ❌
 - R variant: ✅ / ❌
-- Cloud variants: ✅ / ❌
-- Full variant: ✅ / ❌
 
 ### Configuration Results
 - Managed settings: ✅ / ❌

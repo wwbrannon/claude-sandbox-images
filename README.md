@@ -7,38 +7,19 @@ Lightweight, secure Docker images for running Claude Code in sandboxed environme
 
 ## Overview
 
-This repository provides a multi-tier Docker architecture for Claude Code with comprehensive security controls:
+This repository provides Docker images for Claude Code with comprehensive security controls:
 
-- **Base image** with security settings, Unix build toolchain, and modern development utilities
-- **Specialized variants** for different use cases (Python, R, cloud CLIs)
+- **Minimal image** built on Ubuntu 24.04 LTS with Python 3, data science packages, cloud CLIs, cloud SDKs, dev tools, and Claude Code
+- **R image** extending minimal with the full R ecosystem (tidyverse, data.table, devtools, and more)
 - **Layered security** using container isolation + OS sandboxing + permission rules + validation hooks
 - **Audit logging** for compliance and security review
 
 ## Available Images
 
-### Base Images
-
-| Image | Size | Description |
+| Image | Base | Description |
 |-------|------|-------------|
-| `claude-sandbox-base` | ~1.6GB | Foundation with build tools, git, gh, ripgrep, fzf, shellcheck, shfmt, git-delta |
-| `claude-sandbox-minimal` | ~1.6GB | Alias for base (for compatibility) |
-
-### Language Runtimes
-
-| Image | Size | Description |
-|-------|------|-------------|
-| `claude-sandbox-python` | ~2.1GB | Python 3 + pytest, black, pylint, jupyter, pandas, numpy |
-| `claude-sandbox-r` | ~2.1GB | R + tidyverse, ggplot2, dplyr, devtools, rmarkdown |
-
-### Cloud-Enabled
-
-| Image | Size | Description |
-|-------|------|-------------|
-| `claude-sandbox-python-aws` | ~2.6GB | Python + AWS CLI v2 + boto3 |
-| `claude-sandbox-python-gcp` | ~2.6GB | Python + Google Cloud SDK |
-| `claude-sandbox-python-azure` | ~2.6GB | Python + Azure CLI |
-| `claude-sandbox-r-aws` | ~2.6GB | R + AWS CLI v2 |
-| `claude-sandbox-full` | ~3.6GB | Python + R + all cloud CLIs |
+| `claude-sandbox-minimal` | `ubuntu:noble` (24.04 LTS) | Python 3 + data science packages (pandas, numpy, etc.), cloud CLIs (AWS CLI v2, gcloud, az), cloud Python SDKs (boto3, azure-*, google-cloud-*), dev tools (git, gh, ripgrep, fzf, shellcheck, shfmt, git-delta), Claude Code |
+| `claude-sandbox-r` | `claude-sandbox-minimal` | Everything in minimal + R ecosystem (r-base, r-base-dev, r-recommended, littler, tidyverse, data.table, devtools, rmarkdown, and more) |
 
 ## Quick Start
 
@@ -46,16 +27,21 @@ This repository provides a multi-tier Docker architecture for Claude Code with c
 
 ```bash
 # Run with your project mounted at /workspace
-docker run -it -v $(pwd):/workspace claude-sandbox-python
+docker run -it -v $(pwd):/workspace claude-sandbox-minimal
 
 # Run with specific version
-docker run -it -v $(pwd):/workspace claude-sandbox-python:v1.0
+docker run -it -v $(pwd):/workspace claude-sandbox-minimal:v1.0
 
 # Pass environment variables (for non-sensitive config)
-docker run -it -v $(pwd):/workspace -e NODE_ENV=development claude-sandbox-python
+docker run -it -v $(pwd):/workspace -e NODE_ENV=development claude-sandbox-minimal
+
+# Run with R support
+docker run -it -v $(pwd):/workspace claude-sandbox-r
 ```
 
 ### With Cloud Credentials
+
+All cloud CLIs and SDKs are included in `claude-sandbox-minimal` (and `claude-sandbox-r`).
 
 ```bash
 # AWS (pass credentials via env, not files)
@@ -63,20 +49,20 @@ docker run -it -v $(pwd):/workspace \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_DEFAULT_REGION \
-  claude-sandbox-python-aws
+  claude-sandbox-minimal
 
 # GCP (mount service account key, use allowlist path)
 docker run -it -v $(pwd):/workspace \
   -v /path/to/service-account.json:/workspace/.gcp/key.json:ro \
   -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/.gcp/key.json \
-  claude-sandbox-python-gcp
+  claude-sandbox-minimal
 
 # Azure (use Azure CLI login or env vars)
 docker run -it -v $(pwd):/workspace \
   -e AZURE_TENANT_ID \
   -e AZURE_CLIENT_ID \
   -e AZURE_CLIENT_SECRET \
-  claude-sandbox-python-azure
+  claude-sandbox-minimal
 ```
 
 ## Building Images
@@ -97,11 +83,11 @@ REGISTRY=myregistry.io ./build.sh v1.0
 ### Build Single Variant
 
 ```bash
-# Build base image first
-docker build -f Dockerfile.base -t claude-sandbox-base:v1.0 .
+# Build minimal image first (required as base for r)
+docker build -f Dockerfile.minimal -t claude-sandbox-minimal:v1.0 .
 
-# Build specific variant
-docker build -f Dockerfile.python -t claude-sandbox-python:v1.0 .
+# Build R variant (depends on claude-sandbox-minimal)
+docker build -f Dockerfile.r -t claude-sandbox-r:v1.0 .
 ```
 
 ## Security Model
@@ -213,7 +199,6 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and technical d
 ## Requirements
 
 - Docker 20.10 or later
-- For building: GNU parallel (optional, speeds up builds)
 
 ## License
 
@@ -222,7 +207,7 @@ MIT License - see LICENSE file for details
 ## Contributing
 
 Contributions welcome! Please:
-1. Test changes with all image variants
+1. Test changes with both images (minimal and r)
 2. Update documentation for any security changes
 3. Follow existing Dockerfile patterns
 4. Add tests for new validation hooks

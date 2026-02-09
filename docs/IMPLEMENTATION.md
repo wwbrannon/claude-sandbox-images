@@ -7,12 +7,8 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
 ### ✅ Core Infrastructure (100% Complete)
 
 #### 1. Dockerfile Variants
-- [x] `Dockerfile.minimal` - Foundation with security settings and Unix toolchain
-- [x] `Dockerfile.python` - Python 3 + data science stack
-- [x] `Dockerfile.r` - R + tidyverse ecosystem
-- [x] `Dockerfile.python-cloud` - Python + AWS + GCP + Azure CLIs
-- [x] `Dockerfile.r-cloud` - R + AWS + GCP + Azure CLIs
-- [x] `Dockerfile.full` - Python + R + all cloud CLIs
+- [x] `Dockerfile.minimal` - Built FROM `ubuntu:noble` (24.04 LTS) with Python 3, data science packages, cloud CLIs (AWS CLI v2, gcloud, az), cloud Python SDKs (boto3, azure-*, google-cloud-*), dev tools, and Claude Code
+- [x] `Dockerfile.r` - R + tidyverse ecosystem, built on top of minimal
 
 #### 2. Configuration Files
 - [x] `settings/managed-settings.json` - Enforced security policies
@@ -47,8 +43,7 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
 
 #### 4. Build Tooling
 - [x] `build.sh` - Automated build script
-  - Builds base image first (dependency)
-  - Parallel builds for variants (with GNU parallel support)
+  - Builds minimal image first, then r variant
   - Proper version tagging (VERSION + latest)
   - Registry tagging support
   - Image size reporting
@@ -76,7 +71,7 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
   - Best practices for users
 
 - [x] `docs/ARCHITECTURE.md` - Design decisions and rationale
-  - Multi-tier architecture explanation
+  - Two-tier architecture explanation
   - Security layer details
   - Permission mode choices
   - Hook implementation details
@@ -113,15 +108,11 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
 
 ## Architecture Highlights
 
-### Multi-Tier Image Hierarchy
+### Two-Tier Image Hierarchy
 ```
-docker/sandbox-templates:claude-code
-  └── claude-sandbox-minimal (~1.6GB)
-      ├── claude-sandbox-python (~2.1GB)
-      ├── claude-sandbox-r (~2.1GB)
-      ├── claude-sandbox-python-cloud (~2.6GB)
-      ├── claude-sandbox-r-cloud (~2.6GB)
-      └── claude-sandbox-full (~3.6GB)
+ubuntu:noble (24.04 LTS)
+  └── claude-sandbox-minimal (Python 3, data science, cloud CLIs & SDKs, dev tools, Claude Code)
+      └── claude-sandbox-r (+ R ecosystem)
 ```
 
 ### Four Layers of Security
@@ -182,9 +173,9 @@ docker/sandbox-templates:claude-code
 - Git and Docker work without excessive prompts
 - Package registries and cloud APIs accessible
 
-### 🧩 Modular and Flexible
-- Base image with specialized children
-- Choose minimal variant needed
+### 🧩 Simple and Extensible
+- Two-tier architecture: minimal (batteries-included) and r (adds R ecosystem)
+- Minimal image includes Python, cloud CLIs, and SDKs out of the box
 - Easy to extend with custom Dockerfiles
 - Comprehensive documentation for customization
 
@@ -215,18 +206,18 @@ docker/sandbox-templates:claude-code
 
 ## Usage Examples
 
-### Basic Python Development
+### Python Development (with Cloud CLIs and SDKs)
 ```bash
-docker run -it -v $(pwd):/workspace claude-sandbox-python
+docker run -it -v $(pwd):/workspace claude-sandbox-minimal
 ```
 
-### Python with Cloud CLIs
+### Python with Cloud Credentials
 ```bash
 docker run -it -v $(pwd):/workspace \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_DEFAULT_REGION \
-  claude-sandbox-python-cloud
+  claude-sandbox-minimal
 ```
 
 ### R Development
@@ -236,7 +227,7 @@ docker run -it -v $(pwd):/workspace claude-sandbox-r
 
 ### Custom Extension
 ```dockerfile
-FROM claude-sandbox-python:latest
+FROM claude-sandbox-minimal:latest
 USER root
 RUN pip3 install --no-cache-dir django celery redis
 USER agent
@@ -251,7 +242,9 @@ USER agent
 
 ### Build Single Variant
 ```bash
-docker build -f Dockerfile.python -t claude-sandbox-python:v1.0 .
+docker build -f Dockerfile.minimal -t claude-sandbox-minimal:v1.0 .
+# or
+docker build -f Dockerfile.r -t claude-sandbox-r:v1.0 .
 ```
 
 ### Build with Registry Push
@@ -293,12 +286,8 @@ REGISTRY=myregistry.io ./build.sh v1.0
 
 ```
 claude-sandbox/
-├── Dockerfile.minimal                 # Base/minimal image
-├── Dockerfile.python                  # Python variant
-├── Dockerfile.r                       # R variant
-├── Dockerfile.python-cloud            # Python + multi-cloud
-├── Dockerfile.r-cloud                 # R + multi-cloud
-├── Dockerfile.full                    # Full variant
+├── Dockerfile.minimal                 # Foundation image (FROM ubuntu:noble)
+├── Dockerfile.r                       # R variant (FROM minimal)
 ├── build.sh                           # Build script
 ├── entrypoint.sh                      # Container entrypoint
 ├── README.md                          # Main docs
@@ -324,7 +313,7 @@ claude-sandbox/
 
 The implementation is complete. The following verification steps should be performed:
 
-1. **Build Verification**: Build all image variants
+1. **Build Verification**: Build minimal and r image variants
 2. **Configuration Loading**: Verify settings files are correct
 3. **Hook Functionality**: Test validation and logging
 4. **Permission Enforcement**: Test deny/ask/allow rules
@@ -337,8 +326,8 @@ The implementation is complete. The following verification steps should be perfo
 
 ## Success Criteria Met
 
-✅ Base image builds successfully with all configuration files
-✅ All specialized child images build and inherit base correctly
+✅ Minimal image builds successfully from ubuntu:noble with all configuration files
+✅ R image builds on top of minimal and inherits base correctly
 ✅ Managed settings enforce security policies (deny/ask/allow rules)
 ✅ Hooks validate commands and log audit trail
 ✅ Sandbox enabled and restricts network/filesystem appropriately

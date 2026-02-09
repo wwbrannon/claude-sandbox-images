@@ -84,33 +84,15 @@ if ! build_image "minimal"; then
 fi
 echo ""
 
-# Build base language variants (depend on minimal)
-log_info "Step 2: Building base language variants..."
-base_variants=(
-    "python"
+# Build variant images (depend on minimal)
+log_info "Step 2: Building variant images..."
+variants=(
     "r"
 )
 
 failed_builds=()
 
-for variant in "${base_variants[@]}"; do
-    if ! build_image "${variant}"; then
-        failed_builds+=("${variant}")
-    fi
-    echo ""
-done
-
-echo ""
-
-# Build extended variants (depend on base language variants)
-log_info "Step 3: Building extended variants..."
-extended_variants=(
-    "python-cloud"
-    "r-cloud"
-    "full"
-)
-
-for variant in "${extended_variants[@]}"; do
+for variant in "${variants[@]}"; do
     if ! build_image "${variant}"; then
         failed_builds+=("${variant}")
     fi
