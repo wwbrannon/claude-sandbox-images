@@ -217,7 +217,8 @@ RUN git config --system core.pager "delta" && \
 ###############################################################################
 
 USER agent
-RUN curl -fsSL https://claude.ai/install.sh | bash
+RUN curl -fsSL https://claude.ai/install.sh | bash && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 USER root
 
 ENV CLAUDE_ENV_FILE=/etc/sandbox-persistent.sh
