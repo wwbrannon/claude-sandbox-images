@@ -83,13 +83,13 @@ RUN useradd -m -s /bin/bash agent && \
     chown -R agent:agent /home/agent/.claude
 
 # Copy Claude Code configuration files
-COPY --chown=root:root managed-settings.json /etc/claude-code/managed-settings.json
-COPY --chown=agent:agent settings.json /home/agent/.claude/settings.json
+COPY --chown=root:root settings/managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=agent:agent settings/settings.json /home/agent/.claude/settings.json
 COPY --chown=agent:agent hooks/pre-command-validator.sh /home/agent/.claude/hooks/pre-command-validator.sh
 COPY --chown=agent:agent hooks/post-command-logger.sh /home/agent/.claude/hooks/post-command-logger.sh
 
 # Copy logrotate configuration
-COPY --chown=root:root logrotate-claude /etc/logrotate.d/claude
+COPY --chown=root:root settings/logrotate-claude /etc/logrotate.d/claude
 RUN chmod 644 /etc/logrotate.d/claude
 
 # Copy and configure entrypoint script
@@ -99,8 +99,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Make hooks executable
 RUN chmod +x /home/agent/.claude/hooks/*.sh
 
-# Copy user guide
-COPY SANDBOX-README.md /home/agent/README.md
+# Copy agent instructions/configuration
+COPY --chown=agent:agent settings/SANDBOX-README.md /home/agent/README.md
 
 # Configure git for agent user
 RUN git config --system core.pager "delta" && \

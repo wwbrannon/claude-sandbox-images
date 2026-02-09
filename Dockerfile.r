@@ -28,6 +28,5 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Switch back to agent user
-USER agent
+# Don't set USER here - entrypoint.sh handles user switching
 WORKDIR /workspace

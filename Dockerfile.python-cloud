@@ -21,6 +21,5 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/aws
     /tmp/aws/install && \
     rm -rf /tmp/awscliv2.zip /tmp/aws
 
-# Switch back to agent user
-USER agent
+# Don't set USER here - entrypoint.sh handles user switching
 WORKDIR /workspace

@@ -26,6 +26,5 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Switch back to agent user
-USER agent
+# Don't set USER here - entrypoint.sh handles user switching
 WORKDIR /workspace
