@@ -34,6 +34,11 @@
       },
       {
         "tool": "Bash",
+        "pattern": "gosu *",
+        "reason": "Privilege escalation blocked"
+      },
+      {
+        "tool": "Bash",
         "pattern": "curl *://*/*",
         "reason": "Network exfiltration blocked (use sandbox-allowed domains)"
       },
