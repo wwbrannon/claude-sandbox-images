@@ -77,42 +77,64 @@ echo "║         Version: ${VERSION}                                      ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Build base image first (all others depend on it)
-log_info "Step 1: Building base image..."
-if ! build_image "base"; then
-    log_error "Base image build failed. Cannot continue."
+# Build minimal image first (all others depend on it)
+log_info "Step 1: Building minimal base image..."
+if ! build_image "minimal"; then
+    log_error "Minimal image build failed. Cannot continue."
     exit 1
 fi
 echo ""
 
-# Build variants
-log_info "Step 2: Building specialized variants..."
-variants=(
-    "minimal"
+# Build base language variants (depend on minimal)
+log_info "Step 2: Building base language variants..."
+base_variants=(
     "python"
     "r"
-    "python-aws"
-    "python-gcp"
-    "python-azure"
-    "r-aws"
-    "full"
 )
 
 failed_builds=()
 
-# Build in parallel if possible
+# Build base variants in parallel if possible
 if command -v parallel &> /dev/null; then
-    log_info "Building ${#variants[@]} variants in parallel (max ${PARALLEL_BUILDS} concurrent)..."
+    log_info "Building ${#base_variants[@]} base variants in parallel (max ${PARALLEL_BUILDS} concurrent)..."
 
     export -f build_image log_info log_success log_error
     export VERSION REGISTRY RED GREEN YELLOW BLUE NC
 
-    if ! printf "%s\n" "${variants[@]}" | parallel -j "${PARALLEL_BUILDS}" build_image; then
-        log_warning "Some builds failed when running in parallel"
+    if ! printf "%s\n" "${base_variants[@]}" | parallel -j "${PARALLEL_BUILDS}" build_image; then
+        log_warning "Some base variant builds failed"
+        failed_builds+=("base-variants")
     fi
 else
     log_warning "GNU parallel not found. Building sequentially..."
-    for variant in "${variants[@]}"; do
+    for variant in "${base_variants[@]}"; do
+        if ! build_image "${variant}"; then
+            failed_builds+=("${variant}")
+        fi
+        echo ""
+    done
+fi
+
+echo ""
+
+# Build extended variants (depend on base language variants)
+log_info "Step 3: Building extended variants..."
+extended_variants=(
+    "python-cloud"
+    "r-cloud"
+    "full"
+)
+
+# Build extended variants in parallel if possible
+if command -v parallel &> /dev/null; then
+    log_info "Building ${#extended_variants[@]} extended variants in parallel (max ${PARALLEL_BUILDS} concurrent)..."
+
+    if ! printf "%s\n" "${extended_variants[@]}" | parallel -j "${PARALLEL_BUILDS}" build_image; then
+        log_warning "Some extended variant builds failed"
+    fi
+else
+    log_warning "GNU parallel not found. Building sequentially..."
+    for variant in "${extended_variants[@]}"; do
         if ! build_image "${variant}"; then
             failed_builds+=("${variant}")
         fi
