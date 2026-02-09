@@ -77,7 +77,7 @@ if [ "$TOOL" = "Read" ]; then
         # Deny files larger than 100MB (DoS prevention)
         MAX_SIZE=$((100 * 1024 * 1024))
         if [ "$FILE_SIZE" -gt "$MAX_SIZE" ]; then
-            echo "ERROR: File too large for Read operation ($(($FILE_SIZE / 1024 / 1024))MB > 100MB)" >&2
+            echo "ERROR: File too large for Read operation ($((FILE_SIZE / 1024 / 1024))MB > 100MB)" >&2
             exit 1
         fi
     fi

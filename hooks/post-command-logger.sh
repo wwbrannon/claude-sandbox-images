@@ -16,8 +16,6 @@ LOG_FILE=~/.claude/logs/command-log-$(date +%Y-%m-%d).jsonl
 
 # Extract fields
 TOOL=$(echo "$INPUT" | jq -r '.tool')
-TIMESTAMP=$(echo "$INPUT" | jq -r '.timestamp // ""')
-SESSION_ID=$(echo "$INPUT" | jq -r '.sessionId // ""')
 
 # Create log entry with full context
 LOG_ENTRY=$(echo "$INPUT" | jq -c '{
