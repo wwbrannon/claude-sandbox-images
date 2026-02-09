@@ -1,0 +1,6 @@
+# Claude Code Sandbox - Minimal Variant
+# Just the base image (alias for compatibility)
+FROM claude-sandbox-base
+
+# This is intentionally empty - it's just an alias for the base image
+# Use this when you want the minimal toolchain without language runtimes

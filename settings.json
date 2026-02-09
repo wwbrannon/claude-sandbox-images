@@ -1,0 +1,32 @@
+{
+  "model": "claude-sonnet-4-5",
+  "outputStyle": "concise",
+  "maxTokens": 8192,
+
+  "ui": {
+    "theme": "dark",
+    "showLineNumbers": true,
+    "compactMode": false
+  },
+
+  "permissionRules": {
+    "allow": [
+      {
+        "tool": "Bash",
+        "pattern": "make *",
+        "reason": "Project-specific build allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "yarn *",
+        "reason": "Project-specific package manager allowed"
+      }
+    ]
+  },
+
+  "environment": {
+    "EDITOR": "vim",
+    "PAGER": "less",
+    "GIT_PAGER": "delta"
+  }
+}

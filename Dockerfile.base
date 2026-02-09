@@ -1,0 +1,116 @@
+# Claude Code Sandbox Base Image
+# Foundation with security settings, Unix toolchain, and development utilities
+FROM docker/sandbox-templates:claude-code
+
+# Set environment variables
+ENV CLAUDE_SANDBOX_MODE=enabled \
+    CLAUDE_AUTO_ALLOW_SANDBOXED=true \
+    DEBIAN_FRONTEND=noninteractive \
+    TERM=xterm-256color
+
+# Install system packages and development tools in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Build toolchain
+    build-essential \
+    autoconf \
+    automake \
+    libtool \
+    make \
+    cmake \
+    gcc \
+    g++ \
+    pkg-config \
+    # Version control and collaboration
+    git \
+    git-lfs \
+    # Security and sandboxing
+    bubblewrap \
+    # Shell and editing
+    vim \
+    nano \
+    less \
+    # Modern CLI tools
+    ripgrep \
+    fd-find \
+    tree \
+    bat \
+    # Utilities
+    jq \
+    curl \
+    wget \
+    ca-certificates \
+    # Misc
+    locales \
+    && \
+    # Install fzf
+    git clone --depth 1 https://github.com/junegunn/fzf.git /opt/fzf && \
+    /opt/fzf/install --all && \
+    # Install git-delta
+    DELTA_VERSION=0.17.0 && \
+    curl -L "https://github.com/dandavison/delta/releases/download/${DELTA_VERSION}/git-delta_${DELTA_VERSION}_amd64.deb" -o /tmp/delta.deb && \
+    dpkg -i /tmp/delta.deb && \
+    rm /tmp/delta.deb && \
+    # Install shellcheck
+    SHELLCHECK_VERSION=v0.9.0 && \
+    curl -L "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" -o /tmp/shellcheck.tar.xz && \
+    tar -xf /tmp/shellcheck.tar.xz -C /tmp && \
+    mv /tmp/shellcheck-${SHELLCHECK_VERSION}/shellcheck /usr/local/bin/ && \
+    rm -rf /tmp/shellcheck* && \
+    # Install shfmt
+    SHFMT_VERSION=v3.8.0 && \
+    curl -L "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64" -o /usr/local/bin/shfmt && \
+    chmod +x /usr/local/bin/shfmt && \
+    # Install GitHub CLI
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y gh && \
+    # Configure locales
+    locale-gen en_US.UTF-8 && \
+    # Clean up
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Set locale
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
+
+# Create agent user and directories
+RUN useradd -m -s /bin/bash agent && \
+    mkdir -p /home/agent/.claude/hooks /home/agent/.claude/logs /etc/claude-code && \
+    chown -R agent:agent /home/agent/.claude
+
+# Copy Claude Code configuration files
+COPY --chown=root:root managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=agent:agent settings.json /home/agent/.claude/settings.json
+COPY --chown=agent:agent hooks/pre-command-validator.sh /home/agent/.claude/hooks/pre-command-validator.sh
+COPY --chown=agent:agent hooks/post-command-logger.sh /home/agent/.claude/hooks/post-command-logger.sh
+
+# Make hooks executable
+RUN chmod +x /home/agent/.claude/hooks/*.sh
+
+# Copy user guide
+COPY SANDBOX-README.md /home/agent/README.md
+
+# Configure git for agent user
+RUN git config --system core.pager "delta" && \
+    git config --system interactive.diffFilter "delta --color-only" && \
+    git config --system delta.navigate true && \
+    git config --system delta.side-by-side true && \
+    git config --system merge.conflictstyle diff3 && \
+    git config --system diff.colorMoved default
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown agent:agent /workspace
+
+# Switch to agent user
+USER agent
+WORKDIR /workspace
+
+# Set final environment
+ENV PATH="/opt/fzf/bin:${PATH}"
+
+# Default command
+CMD ["/bin/bash"]

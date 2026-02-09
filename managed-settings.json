@@ -1,0 +1,323 @@
+{
+  "defaultMode": "default",
+  "autoAllowBashIfSandboxed": true,
+  "disableBypassPermissionsMode": "disable",
+  "allowManagedPermissionRulesOnly": true,
+  "allowManagedHooksOnly": true,
+
+  "permissionRules": {
+    "deny": [
+      {
+        "tool": "Bash",
+        "pattern": "rm -rf *",
+        "reason": "Destructive filesystem operation"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "chmod 777 *",
+        "reason": "Insecure permission change"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "chown *",
+        "reason": "Ownership modification blocked"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "sudo *",
+        "reason": "Privilege escalation blocked"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "su *",
+        "reason": "Privilege escalation blocked"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "curl *://*/*",
+        "reason": "Network exfiltration blocked (use sandbox-allowed domains)"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "wget *",
+        "reason": "Network exfiltration blocked (use sandbox-allowed domains)"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "nc *",
+        "reason": "Network exfiltration blocked"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "apt-get install *",
+        "reason": "Package installation blocked (use pre-built image)"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "apt install *",
+        "reason": "Package installation blocked (use pre-built image)"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "brew install *",
+        "reason": "Package installation blocked (use pre-built image)"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/.env",
+        "reason": "Environment secrets blocked"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/.env.*",
+        "reason": "Environment secrets blocked"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/secrets/**",
+        "reason": "Secrets directory access blocked"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/credentials/**",
+        "reason": "Credentials directory access blocked"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "~/.bashrc",
+        "reason": "Shell configuration modification blocked"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "~/.zshrc",
+        "reason": "Shell configuration modification blocked"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "/etc/**",
+        "reason": "System configuration modification blocked"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "/bin/**",
+        "reason": "System binary modification blocked"
+      }
+    ],
+
+    "ask": [
+      {
+        "tool": "Bash",
+        "pattern": "git push *",
+        "reason": "State-changing git operation requires approval"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "git commit *",
+        "reason": "State-changing git operation requires approval"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "npm publish *",
+        "reason": "Package publishing requires approval"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "pip publish *",
+        "reason": "Package publishing requires approval"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "docker push *",
+        "reason": "Docker registry push requires approval"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "docker login *",
+        "reason": "Docker login requires approval"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "**/package.json",
+        "reason": "Package manifest modification requires approval"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "**/requirements.txt",
+        "reason": "Dependencies modification requires approval"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "**/Cargo.toml",
+        "reason": "Dependencies modification requires approval"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "**/go.mod",
+        "reason": "Dependencies modification requires approval"
+      }
+    ],
+
+    "allow": [
+      {
+        "tool": "Read",
+        "pattern": "**/*.py",
+        "reason": "Source code reading allowed"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/*.js",
+        "reason": "Source code reading allowed"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/*.ts",
+        "reason": "Source code reading allowed"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/*.md",
+        "reason": "Documentation reading allowed"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/*.json",
+        "reason": "Configuration reading allowed"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/*.yaml",
+        "reason": "Configuration reading allowed"
+      },
+      {
+        "tool": "Read",
+        "pattern": "**/*.yml",
+        "reason": "Configuration reading allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "git status *",
+        "reason": "Read-only git operation allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "git diff *",
+        "reason": "Read-only git operation allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "git log *",
+        "reason": "Read-only git operation allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "git show *",
+        "reason": "Read-only git operation allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "npm run test *",
+        "reason": "Test execution allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "npm test *",
+        "reason": "Test execution allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "pytest *",
+        "reason": "Test execution allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "cargo test *",
+        "reason": "Test execution allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "cargo build *",
+        "reason": "Build execution allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "npm run build *",
+        "reason": "Build execution allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "jq *",
+        "reason": "JSON processing allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "grep *",
+        "reason": "Text search allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "tree *",
+        "reason": "Directory listing allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "ls *",
+        "reason": "File listing allowed"
+      },
+      {
+        "tool": "Bash",
+        "pattern": "cat *",
+        "reason": "File reading allowed"
+      }
+    ]
+  },
+
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": ["git", "docker"],
+    "allowUnixSockets": false,
+    "allowedDomains": [
+      "github.com",
+      "*.github.com",
+      "api.github.com",
+      "raw.githubusercontent.com",
+      "npmjs.org",
+      "*.npmjs.org",
+      "registry.npmjs.org",
+      "registry.yarnpkg.com",
+      "pypi.org",
+      "*.pypi.org",
+      "files.pythonhosted.org",
+      "crates.io",
+      "*.crates.io",
+      "static.crates.io",
+      "rubygems.org",
+      "*.rubygems.org",
+      "maven.apache.org",
+      "*.maven.apache.org",
+      "repo1.maven.org",
+      "*.amazonaws.com",
+      "s3.amazonaws.com",
+      "ec2.amazonaws.com",
+      "*.googleapis.com",
+      "storage.googleapis.com",
+      "*.google.com",
+      "*.azure.com",
+      "*.azurewebsites.net",
+      "stackoverflow.com",
+      "*.stackoverflow.com",
+      "stackexchange.com",
+      "*.stackexchange.com"
+    ]
+  },
+
+  "hooks": {
+    "beforeTool": "/home/agent/.claude/hooks/pre-command-validator.sh",
+    "afterTool": "/home/agent/.claude/hooks/post-command-logger.sh"
+  },
+
+  "mcp": {
+    "allowed": ["memory", "github"],
+    "denied": ["filesystem", "shell"]
+  }
+}
