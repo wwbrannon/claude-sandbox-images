@@ -7,7 +7,6 @@ set -euo pipefail
 # Configuration
 VERSION="${1:-v1.0}"
 REGISTRY="${REGISTRY:-}"  # Set REGISTRY env var to push to a registry
-PARALLEL_BUILDS="${PARALLEL_BUILDS:-4}"  # Number of parallel builds
 
 # Colors for output
 RED='\033[0;31m'
@@ -94,26 +93,12 @@ base_variants=(
 
 failed_builds=()
 
-# Build base variants in parallel if possible
-if command -v parallel &> /dev/null; then
-    log_info "Building ${#base_variants[@]} base variants in parallel (max ${PARALLEL_BUILDS} concurrent)..."
-
-    export -f build_image log_info log_success log_error
-    export VERSION REGISTRY RED GREEN YELLOW BLUE NC
-
-    if ! printf "%s\n" "${base_variants[@]}" | parallel -j "${PARALLEL_BUILDS}" build_image; then
-        log_warning "Some base variant builds failed"
-        failed_builds+=("base-variants")
+for variant in "${base_variants[@]}"; do
+    if ! build_image "${variant}"; then
+        failed_builds+=("${variant}")
     fi
-else
-    log_warning "GNU parallel not found. Building sequentially..."
-    for variant in "${base_variants[@]}"; do
-        if ! build_image "${variant}"; then
-            failed_builds+=("${variant}")
-        fi
-        echo ""
-    done
-fi
+    echo ""
+done
 
 echo ""
 
@@ -125,22 +110,12 @@ extended_variants=(
     "full"
 )
 
-# Build extended variants in parallel if possible
-if command -v parallel &> /dev/null; then
-    log_info "Building ${#extended_variants[@]} extended variants in parallel (max ${PARALLEL_BUILDS} concurrent)..."
-
-    if ! printf "%s\n" "${extended_variants[@]}" | parallel -j "${PARALLEL_BUILDS}" build_image; then
-        log_warning "Some extended variant builds failed"
+for variant in "${extended_variants[@]}"; do
+    if ! build_image "${variant}"; then
+        failed_builds+=("${variant}")
     fi
-else
-    log_warning "GNU parallel not found. Building sequentially..."
-    for variant in "${extended_variants[@]}"; do
-        if ! build_image "${variant}"; then
-            failed_builds+=("${variant}")
-        fi
-        echo ""
-    done
-fi
+    echo ""
+done
 
 # Summary
 echo ""
