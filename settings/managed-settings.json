@@ -278,6 +278,7 @@
 
   "sandbox": {
     "enabled": true,
+    "enableWeakerNestedSandbox": true,
     "allowUnsandboxedCommands": false,
     "excludedCommands": ["git", "docker"],
     "allowUnixSockets": false,

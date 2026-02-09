@@ -23,20 +23,32 @@ This repository provides Docker images for Claude Code with comprehensive securi
 
 ## Quick Start
 
+These images are designed to run under [`docker sandbox`](https://docs.docker.com/ai/sandboxes/),
+which provides microVM isolation with its own Docker daemon. The bubblewrap (bwrap)
+OS-level sandbox requires namespace creation, and `docker sandbox` is the supported
+way to provide it. Running Claude Code inside a plain `docker run` container will
+fail with `bwrap: Creating new namespace failed: Operation not permitted`.
+
 ### Basic Usage
 
 ```bash
-# Run with your project mounted at /workspace
-docker run -it -v $(pwd):/workspace claude-sandbox-minimal
+# Run with docker sandbox (recommended)
+docker sandbox start my-sandbox --image claude-sandbox-minimal
 
-# Run with specific version
-docker run -it -v $(pwd):/workspace claude-sandbox-minimal:v1.0
-
-# Pass environment variables (for non-sensitive config)
-docker run -it -v $(pwd):/workspace -e NODE_ENV=development claude-sandbox-minimal
+# Pass arguments to Claude Code after --
+docker sandbox start my-sandbox --image claude-sandbox-minimal -- --dangerously-skip-permissions
 
 # Run with R support
-docker run -it -v $(pwd):/workspace claude-sandbox-r
+docker sandbox start my-sandbox --image claude-sandbox-r
+```
+
+### Development / Debugging (plain Docker)
+
+For quick development tasks that don't involve Claude Code (e.g., verifying
+installed packages), you can use plain `docker run`:
+
+```bash
+docker run -it -v $(pwd):/workspace claude-sandbox-minimal /bin/bash
 ```
 
 ### With Cloud Credentials

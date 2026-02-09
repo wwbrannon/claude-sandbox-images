@@ -77,6 +77,34 @@ The update must be in the same RUN command for Docker caching to work correctly.
 
 ## Runtime Issues
 
+### bwrap: "Creating new namespace failed: Operation not permitted"
+
+**Symptom**:
+```
+bwrap: Creating new namespace failed: Operation not permitted
+```
+Every bash command Claude tries to run fails immediately.
+
+**Cause**: These images use bubblewrap (bwrap) as an OS-level sandbox, which
+requires Linux namespace creation. Plain `docker run` blocks namespace syscalls
+by default via its seccomp profile. These images are designed to run under
+`docker sandbox`, which provides a microVM environment that supports nested
+namespaces.
+
+**Solution**: Use `docker sandbox` instead of `docker run`:
+```bash
+docker sandbox start my-sandbox --image claude-sandbox-minimal
+```
+
+The `enableWeakerNestedSandbox` setting in `managed-settings.json` allows bwrap
+to fall back to a mode that works inside the `docker sandbox` microVM without
+full namespace privileges. This is safe because the microVM itself provides the
+outer isolation layer.
+
+If you need to use plain `docker run` for development, note that the Makefile
+targets (`make shell`, `make test`) invoke binaries directly and don't go through
+Claude Code's bwrap sandbox, so they work without extra flags.
+
 ### "Permission denied" accessing /workspace
 
 **Symptom**:
