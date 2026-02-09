@@ -19,7 +19,7 @@
     ]
   },
 
-  "environment": {
+  "env": {
     "EDITOR": "vim",
     "PAGER": "less",
     "GIT_PAGER": "delta"
