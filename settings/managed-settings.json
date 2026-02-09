@@ -323,8 +323,28 @@
   },
 
   "hooks": {
-    "beforeTool": "/home/agent/.claude/hooks/pre-command-validator.sh",
-    "afterTool": "/home/agent/.claude/hooks/post-command-logger.sh"
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/agent/.claude/hooks/pre-command-validator.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/agent/.claude/hooks/post-command-logger.sh"
+          }
+        ]
+      }
+    ]
   },
 
   "mcp": {
