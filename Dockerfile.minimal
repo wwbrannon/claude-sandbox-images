@@ -216,10 +216,7 @@ RUN git config --system core.pager "delta" && \
 # 10. Install Claude Code (as agent user)
 ###############################################################################
 
-USER agent
-RUN curl -fsSL https://claude.ai/install.sh | bash && \
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-USER root
+RUN npm install -g @anthropic-ai/claude-code
 
 ENV CLAUDE_ENV_FILE=/etc/sandbox-persistent.sh
 
