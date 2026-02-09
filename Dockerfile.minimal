@@ -23,23 +23,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN mkdir -p -m 755 /etc/apt/keyrings && mkdir -p -m 755 /etc/apt/sources.list.d
 
-# FIXME: Use noble (24.04 LTS) for third-party repos as they don't support questing (25.10) yet
-ARG REPO_CODENAME=noble
-
 ## R Project's official R
 RUN curl -fsLS https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor > /etc/apt/keyrings/cran-ubuntu.gpg \
     && chmod go+r /etc/apt/keyrings/cran-ubuntu.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cran-ubuntu.gpg] https://cloud.r-project.org/bin/linux/ubuntu ${REPO_CODENAME}-cran40/" | tee /etc/apt/sources.list.d/cran.list > /dev/null
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cran-ubuntu.gpg] https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" | tee /etc/apt/sources.list.d/cran.list > /dev/null
 
 ## r2u: up-to-date CRAN packages in R images
 RUN curl -fsLS https://eddelbuettel.github.io/r2u/assets/dirk_eddelbuettel_key.asc | gpg --dearmor > /etc/apt/keyrings/cranapt_key.gpg \
     && chmod go+r /etc/apt/keyrings/cranapt_key.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cranapt_key.gpg] https://r2u.stat.illinois.edu/ubuntu ${REPO_CODENAME} main" > /etc/apt/sources.list.d/cranapt.list
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cranapt_key.gpg] https://r2u.stat.illinois.edu/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/cranapt.list
 
 ## Azure CLI
 RUN curl -fsLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/keyrings/microsoft.gpg && \
     chmod go+r /etc/apt/keyrings/microsoft.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ ${REPO_CODENAME} main" > /etc/apt/sources.list.d/azure-cli.list
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list
 
 ## Google Cloud CLI
 RUN curl -fsLS https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor > /etc/apt/keyrings/google-cloud.gpg \
