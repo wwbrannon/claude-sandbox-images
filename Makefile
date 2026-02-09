@@ -82,12 +82,11 @@ list:
 	@docker images --filter "reference=$(IMAGE_PREFIX)-*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}"
 
 # Note: these images are designed to run under `docker sandbox`, which provides
-# its own microVM isolation. The make targets below (shell, test) use plain
-# `docker run` for development convenience. They don't need --security-opt flags
-# because they invoke binaries directly, not through Claude Code's bwrap sandbox.
-# If you run Claude Code inside a plain `docker run` container, bwrap will fail
-# with "Creating new namespace failed: Operation not permitted" -- use
-# `docker sandbox` instead.
+# its own microVM isolation. The bwrap OS-level sandbox is disabled in
+# managed-settings.json because neither `docker sandbox` nor plain `docker run`
+# allow the unprivileged user namespace creation that bwrap requires. The
+# microVM isolation from `docker sandbox` + the permission rules in
+# managed-settings.json provide the security layers instead.
 IMAGE ?= minimal
 shell:
 	docker run --rm -it $(IMAGE_PREFIX)-$(IMAGE):$(VERSION) /bin/bash
