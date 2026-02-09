@@ -1,0 +1,23 @@
+# Logrotate configuration for Claude Code sandbox logs
+# Place in /etc/logrotate.d/claude
+
+/home/agent/.claude/logs/command-log-*.jsonl {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    su agent agent
+}
+
+/home/agent/.claude/logs/sensitive-ops.log {
+    daily
+    rotate 30
+    missingok
+    notifempty
+    compress
+    delaycompress
+    su agent agent
+}

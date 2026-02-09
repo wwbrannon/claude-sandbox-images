@@ -52,8 +52,7 @@ if [ "$TOOL" = "Bash" ]; then
     fi
 fi
 
-# Rotate old logs (keep last 7 days)
-find ~/.claude/logs -name "command-log-*.jsonl" -type f -mtime +7 -delete 2>/dev/null || true
+# Log rotation is handled by logrotate (see /etc/logrotate.d/claude)
 
 # Exit successfully (return value ignored anyway)
 exit 0

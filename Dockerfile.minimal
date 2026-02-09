@@ -52,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     autoconf automake m4 bison flex gdb libtool linux-headers-generic \
     git subversion bzr mercurial cvs gh git-lfs git-delta \
     bzip2 gzip zip unzip zlib1g zlib1g-dev libssl-dev \
-    jq pkg-config cmake shellcheck shfmt exuberant-ctags \
+    jq pkg-config cmake shellcheck shfmt exuberant-ctags logrotate cron gosu \
     less tree dos2unix uni2ascii pv rlwrap locate members diffutils \
     ripgrep fd-find bat fzf \
     bubblewrap \
@@ -88,6 +88,14 @@ COPY --chown=agent:agent settings.json /home/agent/.claude/settings.json
 COPY --chown=agent:agent hooks/pre-command-validator.sh /home/agent/.claude/hooks/pre-command-validator.sh
 COPY --chown=agent:agent hooks/post-command-logger.sh /home/agent/.claude/hooks/post-command-logger.sh
 
+# Copy logrotate configuration
+COPY --chown=root:root logrotate-claude /etc/logrotate.d/claude
+RUN chmod 644 /etc/logrotate.d/claude
+
+# Copy and configure entrypoint script
+COPY --chown=root:root entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Make hooks executable
 RUN chmod +x /home/agent/.claude/hooks/*.sh
 
@@ -105,9 +113,11 @@ RUN git config --system core.pager "delta" && \
 # Create workspace directory
 RUN mkdir -p /workspace && chown agent:agent /workspace
 
-# Switch to agent user
-USER agent
+# Set working directory
 WORKDIR /workspace
 
-# Default command
+# Set entrypoint to start cron and other services (runs as root, then switches to agent)
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Default command (will be run as agent user via entrypoint)
 CMD ["/bin/bash"]
