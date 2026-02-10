@@ -1,92 +1,55 @@
 VERSION  ?= v1.0
-REGISTRY ?=
 VARIANTS := minimal r
 
 IMAGE_PREFIX := claude-sandbox
 
-.PHONY: build $(addprefix build-,$(VARIANTS)) \
-        lint test scan clean push list \
-        shell
+.PHONY: build lint test scan clean push list shell
 
-# ---------- build ----------
+#
+# image building and management
+#
 
-ifdef IMAGE
-build: build-$(IMAGE)
-else
-build: $(addprefix build-,$(VARIANTS))
-endif
+build:
+	for variant in $(VARIANTS); do \
+		docker build -f "Dockerfile.$$variant" \
+			-t "$(IMAGE_PREFIX)-$$variant:$(VERSION)" \
+			-t "$(IMAGE_PREFIX)-$$variant:latest" .
+	done
 
-build-minimal:
-	docker build -f Dockerfile.minimal \
-		-t $(IMAGE_PREFIX)-minimal:$(VERSION) \
-		-t $(IMAGE_PREFIX)-minimal:latest .
-
-build-r: build-minimal
-	docker build -f Dockerfile.r \
-		-t $(IMAGE_PREFIX)-r:$(VERSION) \
-		-t $(IMAGE_PREFIX)-r:latest .
-
-# ---------- lint ----------
-
-lint:
-	shellcheck entrypoint.sh hooks/*.sh
-	hadolint Dockerfile.minimal Dockerfile.r
-	jq empty settings/managed-settings.json
-	jq empty settings/settings.json
-
-# ---------- test ----------
-
-test: build
-	@echo "==> Smoke-testing minimal image"
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) python3 --version
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) node --version
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) aws --version
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) gcloud --version
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) az --version
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) gh --version
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) uv --version
-	docker run --rm $(IMAGE_PREFIX)-minimal:$(VERSION) jq empty /etc/claude-code/managed-settings.json
-	@echo "==> Smoke-testing R image"
-	docker run --rm $(IMAGE_PREFIX)-r:$(VERSION) Rscript -e 'library(tidyverse); cat("OK\n")'
-	@echo "==> All smoke tests passed"
-
-# ---------- scan ----------
-
-scan: build
-	trivy image --severity HIGH,CRITICAL $(IMAGE_PREFIX)-minimal:$(VERSION)
-	trivy image --severity HIGH,CRITICAL $(IMAGE_PREFIX)-r:$(VERSION)
-
-# ---------- push ----------
-
+REGISTRY ?=
 push: build
 ifndef REGISTRY
 	$(error REGISTRY is not set. Usage: make push REGISTRY=ghcr.io/youruser)
 endif
-	@for variant in $(VARIANTS); do \
+	for variant in $(VARIANTS); do \
 		docker tag $(IMAGE_PREFIX)-$$variant:$(VERSION) $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:$(VERSION) && \
 		docker tag $(IMAGE_PREFIX)-$$variant:latest   $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:latest   && \
 		docker push $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:$(VERSION) && \
 		docker push $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:latest; \
 	done
 
-# ---------- clean ----------
-
-clean:
+rm:
 	@for variant in $(VARIANTS); do \
 		docker rmi $(IMAGE_PREFIX)-$$variant:$(VERSION) $(IMAGE_PREFIX)-$$variant:latest 2>/dev/null || true; \
 	done
 
-# ---------- helpers ----------
+#
+# quality checks, dev shell
+#
 
-list:
-	@docker images --filter "reference=$(IMAGE_PREFIX)-*" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}"
+scan: build
+	for variant in $(VARIANTS); do \
+		trivy image --severity HIGH,CRITICAL "$(IMAGE_PREFIX)-$$variant:$(VERSION)"
+	done
 
-# Note: these images are designed to run under `docker sandbox`, which provides
-# its own microVM isolation. The bwrap OS-level sandbox is disabled in
-# managed-settings.json because neither `docker sandbox` nor plain `docker run`
-# allow the unprivileged user namespace creation that bwrap requires. The
-# microVM isolation from `docker sandbox` + the permission rules in
-# managed-settings.json provide the security layers instead.
+lint:
+	jq empty settings/managed-settings.json
+	jq empty settings/settings.json
+	shellcheck entrypoint.sh hooks/*.sh
+	for variant in $(VARIANTS); do \
+		hadolint "Dockerfile.$$variant"
+	done
+
 IMAGE ?= minimal
 shell:
 	docker run --rm -it $(IMAGE_PREFIX)-$(IMAGE):$(VERSION) /bin/bash
