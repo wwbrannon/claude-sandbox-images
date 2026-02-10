@@ -19,8 +19,6 @@ Security policies are enforced via managed settings at `/etc/claude-code/managed
 **Allowed** (local operations are safe and reversible in the sandbox):
 - Everything else, including git commits, file edits, builds, and tests
 
-**Network access** is restricted to: package registries (npmjs, pypi, crates.io, CRAN), GitHub, cloud provider APIs (AWS, GCP, Azure), and Stack Overflow/Exchange.
-
 ## When something is blocked
 
 Don't try to work around security restrictions. If an operation is denied, use a different approach or ask the user for guidance.
