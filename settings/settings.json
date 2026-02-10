@@ -9,16 +9,6 @@
     "compactMode": false
   },
 
-  "permissionRules": {
-    "allow": [
-      {
-        "tool": "Bash",
-        "pattern": "make *",
-        "reason": "Project-specific build allowed"
-      }
-    ]
-  },
-
   "env": {
     "EDITOR": "vim",
     "PAGER": "less",

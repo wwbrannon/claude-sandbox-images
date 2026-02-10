@@ -88,16 +88,14 @@ We implement defense-in-depth with four security layers:
 
 **Implementation**:
 - Deny rules block dangerous operations
-- Ask rules require user approval for dependency manifest edits
-- Allow rules reduce prompt fatigue
+- All other local operations auto-allowed via `autoAllowBashIfSandboxed`
 - Enforced by Claude Code before tool execution
 
 **Threats mitigated**:
 - Reading project secrets (.env files)
 - Destructive filesystem operations
-- Accidental dependency changes
 
-Note: Remote operations (git push, package publishing) are controlled at the infrastructure level by whether credentials are mounted into the container, not by permission rules.
+Note: Remote operations (git push, package publishing) are controlled at the infrastructure level by whether credentials are mounted into the container, not by permission rules. Ask and allow rules are not used — the sandbox philosophy is that all local operations are safe and reversible.
 
 **Key decision**: Focus deny rules on *realistic container threats*. We don't deny access to ~/.ssh or ~/.aws inside the container because:
 1. Container isolation prevents access to host paths anyway
@@ -342,7 +340,7 @@ RUN pip3 install --no-cache-dir package1 package2
 - **Repository organization**: Settings grouped in settings/ directory
 
 **Configuration in managed settings**:
-- `allowManagedPermissionRulesOnly: true` - users can't override deny/ask rules
+- `allowManagedPermissionRulesOnly: true` - users can't override deny rules
 - `allowManagedHooksOnly: true` - users can't disable hooks
 
 ## Image Naming

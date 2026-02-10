@@ -19,8 +19,8 @@ Security policies are enforced via managed settings at `/etc/claude-code/managed
 - Package publishing (requires registry credentials)
 - Docker registry ops (requires docker login credentials)
 
-**Requires approval** (will prompt the user):
-- Dependency manifest edits (`package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`)
+**Allowed** (local operations are safe and reversible in the sandbox):
+- Everything else, including git commits, file edits, builds, and tests
 
 **Network access** is restricted to: package registries (npmjs, pypi, crates.io, CRAN), GitHub, cloud provider APIs (AWS, GCP, Azure), and Stack Overflow/Exchange.
 

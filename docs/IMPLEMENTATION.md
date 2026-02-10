@@ -15,7 +15,7 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
   - Default permission mode with autoAllowBashIfSandboxed
   - Comprehensive deny rules (destructive ops, secrets, network, privilege escalation including gosu)
   - Remote operations (git push, publishing) controlled by credential availability, not permission rules
-  - Allow rules for safe development operations
+  - All local operations auto-allowed (sandbox philosophy: local ops are safe and reversible)
   - Sandbox configuration with allowedDomains (including CRAN mirrors, PyPI CDN)
   - Hook configuration
   - MCP restrictions
@@ -23,7 +23,6 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
 - [x] `settings/settings.json` - User settings template
   - Model selection with support for Sonnet, Opus, and Haiku
   - UI preferences and output style
-  - Project-specific allow rules
   - Environment variables
   - Cannot override managed policies
 
@@ -130,7 +129,7 @@ ubuntu:noble (24.04 LTS)
    - Git/Docker excluded for compatibility
 
 3. **Layer 3: Permission Rules**
-   - Declarative deny/ask/allow policies
+   - Declarative deny rules for dangerous operations
    - Focuses on realistic container threats
    - Cannot be overridden by users
    - Fast evaluation before execution
@@ -163,14 +162,14 @@ ubuntu:noble (24.04 LTS)
 
 ### 🔒 Security-First Design
 - Defense-in-depth with four security layers
-- Comprehensive permission rules (deny/ask/allow)
+- Deny rules block dangerous operations; all local ops auto-allowed
+- Remote operations controlled by credential availability
 - Dynamic validation hooks for complex patterns
 - Audit logging for compliance and forensics
 - Network domain filtering (best-effort)
 
 ### 🎯 Practical for Development
-- Auto-allow sandboxed commands (reduces prompts)
-- Allow rules for common operations (tests, builds, reads)
+- Auto-allow sandboxed commands (no prompts for local operations)
 - Git and Docker work without excessive prompts
 - Package registries and cloud APIs accessible
 
@@ -316,7 +315,7 @@ The implementation is complete. The following verification steps should be perfo
 1. **Build Verification**: Build minimal and r image variants
 2. **Configuration Loading**: Verify settings files are correct
 3. **Hook Functionality**: Test validation and logging
-4. **Permission Enforcement**: Test deny/ask/allow rules
+4. **Permission Enforcement**: Test deny rules
 5. **Sandbox Status**: Verify OS-level sandbox is enabled
 6. **Tool Installation**: Verify all tools are present
 7. **Network Isolation**: Test domain filtering (best-effort)
@@ -328,7 +327,7 @@ The implementation is complete. The following verification steps should be perfo
 
 ✅ Minimal image builds successfully from ubuntu:noble with all configuration files
 ✅ R image builds on top of minimal and inherits base correctly
-✅ Managed settings enforce security policies (deny/ask/allow rules)
+✅ Managed settings enforce security policies (deny rules, auto-allow for local ops)
 ✅ Hooks validate commands and log audit trail
 ✅ Sandbox enabled and restricts network/filesystem appropriately
 ✅ Permission mode balances security and UX

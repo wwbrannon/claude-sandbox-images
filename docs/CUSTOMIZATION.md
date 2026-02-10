@@ -104,11 +104,11 @@ docker run -it \
   claude-sandbox-python
 ```
 
-**Important**: You can only add allow rules. You CANNOT override deny or ask rules from managed-settings.json.
+**Important**: You CANNOT override deny rules from managed-settings.json.
 
 ### Modifying Managed Settings (Advanced)
 
-To change deny/ask rules, create a custom image with modified managed settings:
+To change deny rules, create a custom image with modified managed settings:
 
 ```dockerfile
 FROM claude-sandbox-python:latest
@@ -617,7 +617,7 @@ RUN apt-get update && apt-get install -y ...
 
 - Verify file is mounted: `docker exec <container> cat /home/agent/.claude/settings.json`
 - Check ownership: `docker exec <container> ls -la /home/agent/.claude/`
-- Remember: You can't override managed deny/ask rules
+- Remember: You can't override managed deny rules
 
 ## Example: Complete Custom Image
 

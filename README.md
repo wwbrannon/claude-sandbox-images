@@ -133,11 +133,11 @@ This sandbox implements **defense-in-depth** with four security layers:
 ### Layer 3: Permission Rules (Claude Code)
 **Protects**: Prevents unwanted operations even if sandbox allows them
 
-- **Deny rules** block operations before they reach the sandbox
-- **Ask rules** require user approval (dependency manifest edits)
-- **Allow rules** auto-approve safe operations
+- **Deny rules** block dangerous operations (destructive ops, secrets, privilege escalation)
+- All other local operations are auto-allowed via `autoAllowBashIfSandboxed`
+- Remote operations (push, publish) are controlled by credential availability, not permission rules
 
-**Why needed**: Defense in depth, better UX, covers threats sandbox can't block
+**Why needed**: Defense in depth — deny rules catch dangerous local operations even if the sandbox has a gap
 
 ### Layer 4: Validation Hooks (Dynamic Checks)
 **Protects**: Context-specific threats that permission rules can't express

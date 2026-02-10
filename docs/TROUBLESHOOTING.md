@@ -154,7 +154,7 @@ This is expected behavior. The operation is blocked by security policies. Option
 1. **Check if it's actually needed**: Is there a safer alternative?
 2. **Review deny rules**: `cat /etc/claude-code/managed-settings.json`
 3. **Create custom image**: If you need the operation, create a custom image with modified rules
-4. **Use ask rules**: Some operations require approval (type "yes" when prompted)
+4. **Check credentials**: Remote operations (push, publish) require credentials mounted into the container
 
 ### Commands execute but nothing happens
 
@@ -205,7 +205,7 @@ docker run -it \
 test -f my-settings.json || echo "File missing!"
 ```
 
-**Important**: User settings cannot override managed deny/ask rules.
+**Important**: User settings cannot override managed deny rules.
 
 ### Hooks not executing
 
