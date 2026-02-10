@@ -88,15 +88,16 @@ We implement defense-in-depth with four security layers:
 
 **Implementation**:
 - Deny rules block dangerous operations
-- Ask rules require user approval for state-changing ops
+- Ask rules require user approval for dependency manifest edits
 - Allow rules reduce prompt fatigue
 - Enforced by Claude Code before tool execution
 
 **Threats mitigated**:
 - Reading project secrets (.env files)
 - Destructive filesystem operations
-- Unauthorized git pushes
-- Package publishing accidents
+- Accidental dependency changes
+
+Note: Remote operations (git push, package publishing) are controlled at the infrastructure level by whether credentials are mounted into the container, not by permission rules.
 
 **Key decision**: Focus deny rules on *realistic container threats*. We don't deny access to ~/.ssh or ~/.aws inside the container because:
 1. Container isolation prevents access to host paths anyway
@@ -140,7 +141,7 @@ Each layer protects against different threats:
 | curl to attacker.com | Layer 2 (sandbox allowedDomains) + Layer 3 (deny curl) |
 | Command injection | Layer 3 (deny patterns) + Layer 4 (hook validation) |
 | Privilege escalation (sudo/su/gosu) | Layer 3 (deny rules block all privilege escalation) |
-| Git push without approval | Layer 3 (ask rules) |
+| Git push without authorization | Layer 1 (don't mount SSH keys/tokens) |
 | Symlink to /etc/passwd | Layer 4 (hook validates symlink targets) |
 
 **Design philosophy**: Trust but verify. We trust container isolation for host protection, but add permission rules and hooks for container-internal threats.
@@ -157,18 +158,17 @@ Each layer protects against different threats:
 ```
 
 **Rationale**:
-- **Security**: Deny/ask rules still enforced
+- **Security**: Deny rules still enforced; remote operations (git push, package publishing) are controlled at the infrastructure level by whether credentials are mounted
 - **UX**: Reduces prompt fatigue for safe operations
-- **Trust model**: We trust the OS sandbox enough to auto-allow sandboxed commands
+- **Trust model**: We trust the OS sandbox for host protection and credential absence for preventing unauthorized remote operations — permission rules are defense-in-depth for container-internal threats, not the primary security boundary
 
 **Alternative considered**: `strict` mode (always prompt)
 - ❌ Prompt fatigue would make sandbox unusable
 - ❌ Users would disable it or work around it
-- ❌ Doesn't add security (sandbox is already limiting)
+- ❌ Doesn't add meaningful security (`autoAllowBashIfSandboxed` bypasses `ask` rules anyway; deny rules and credential control are what actually matter)
 
 **Alternative considered**: `bypass` mode (never prompt)
-- ❌ Defeats the purpose of security layers
-- ❌ Would allow unauthorized git pushes, package publishing
+- ❌ Defeats the purpose of defense-in-depth
 - ❌ Explicitly disabled: `"disableBypassPermissionsMode": "disable"`
 
 ## Hook Implementation

@@ -263,7 +263,7 @@ This requires running Claude Code inside the container:
 
 - [ ] Destructive operations (rm -rf) are denied
 - [ ] Reading .env files is denied
-- [ ] Git push/commit requires approval (ask)
+- [ ] Git commit/push is auto-allowed (controlled by credential availability)
 - [ ] Git status/diff is auto-allowed
 - [ ] Reading source files is auto-allowed
 - [ ] Running tests is auto-allowed
@@ -276,7 +276,7 @@ docker run -it -v $(pwd):/workspace claude-sandbox-minimal:test
 # - Try: rm -rf /tmp/test (should be denied)
 # - Try: cat .env (should be denied)
 # - Try: git status (should be allowed)
-# - Try: git commit -m "test" (should ask)
+# - Try: git commit -m "test" (should succeed without prompting)
 # - Try: cat README.md (should be allowed)
 # - Try: pytest (should be allowed)
 ```
@@ -354,7 +354,7 @@ Simulate a realistic development workflow:
 4. [ ] Run tests
 5. [ ] Make a code change
 6. [ ] Verify change
-7. [ ] Attempt git commit (should ask for approval)
+7. [ ] Attempt git commit (should succeed without prompting)
 
 ```bash
 # Use a real project or create a test one
@@ -370,7 +370,7 @@ pytest tests/  # if you have tests
 echo "# test change" >> some_file.py
 git diff
 git status
-# git commit would require approval in Claude Code
+# git commit succeeds without prompting; push controlled by credential availability
 
 exit
 ```

@@ -134,7 +134,7 @@ This sandbox implements **defense-in-depth** with four security layers:
 **Protects**: Prevents unwanted operations even if sandbox allows them
 
 - **Deny rules** block operations before they reach the sandbox
-- **Ask rules** require user approval (git push, npm publish)
+- **Ask rules** require user approval (dependency manifest edits)
 - **Allow rules** auto-approve safe operations
 
 **Why needed**: Defense in depth, better UX, covers threats sandbox can't block
@@ -260,7 +260,7 @@ This sandbox is NOT designed for:
 ## FAQ
 
 **Q: Why not just use permission rules without the OS sandbox?**
-A: Defense in depth. If permission rules have a bug, the OS sandbox still provides isolation. Plus, the sandbox enables `autoAllowBashIfSandboxed` for better UX.
+A: Defense in depth. If permission rules have a bug, the OS sandbox still provides isolation. The sandbox also enables `autoAllowBashIfSandboxed` for better UX — remote operations like `git push` and `npm publish` are controlled at the infrastructure level by whether credentials are mounted into the container, which is a stronger boundary than permission rules.
 
 **Q: Can I disable the sandbox to run certain commands?**
 A: No, `allowUnsandboxedCommands: false` is enforced. Git and Docker are excluded from sandboxing for compatibility, but the sandbox boundary cannot be bypassed.

@@ -111,36 +111,6 @@
 
     "ask": [
       {
-        "tool": "Bash",
-        "pattern": "git push *",
-        "reason": "State-changing git operation requires approval"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "git commit *",
-        "reason": "State-changing git operation requires approval"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "npm publish *",
-        "reason": "Package publishing requires approval"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "pip publish *",
-        "reason": "Package publishing requires approval"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "docker push *",
-        "reason": "Docker registry push requires approval"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "docker login *",
-        "reason": "Docker login requires approval"
-      },
-      {
         "tool": "Edit",
         "pattern": "**/package.json",
         "reason": "Package manifest modification requires approval"

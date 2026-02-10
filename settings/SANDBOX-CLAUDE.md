@@ -14,10 +14,12 @@ Security policies are enforced via managed settings at `/etc/claude-code/managed
 - Reading secrets (`.env`, `.env.*`, `secrets/`, `credentials/`)
 - Editing system files (`/etc/`, `/bin/`, shell configs)
 
+**Controlled by credentials** (allowed if credentials are mounted, impossible otherwise):
+- Git push (requires SSH key or token)
+- Package publishing (requires registry credentials)
+- Docker registry ops (requires docker login credentials)
+
 **Requires approval** (will prompt the user):
-- Git writes (`git push`, `git commit`)
-- Package publishing (`npm publish`, `pip publish`)
-- Docker registry ops (`docker push`, `docker login`)
 - Dependency manifest edits (`package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`)
 
 **Network access** is restricted to: package registries (npmjs, pypi, crates.io, CRAN), GitHub, cloud provider APIs (AWS, GCP, Azure), and Stack Overflow/Exchange.

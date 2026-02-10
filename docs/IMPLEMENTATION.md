@@ -14,7 +14,7 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
 - [x] `settings/managed-settings.json` - Enforced security policies
   - Default permission mode with autoAllowBashIfSandboxed
   - Comprehensive deny rules (destructive ops, secrets, network, privilege escalation including gosu)
-  - Ask rules for state-changing operations (git, publishing)
+  - Remote operations (git push, publishing) controlled by credential availability, not permission rules
   - Allow rules for safe development operations
   - Sandbox configuration with allowedDomains (including CRAN mirrors, PyPI CDN)
   - Hook configuration
@@ -147,7 +147,7 @@ ubuntu:noble (24.04 LTS)
 - Mode: `default` with `autoAllowBashIfSandboxed: true`
 - Balances security and UX
 - Deny rules still enforced
-- Ask rules still prompt
+- Remote operations controlled by credential availability
 - Reduces prompt fatigue for safe operations
 
 ### Tools Included in Base Image
