@@ -17,7 +17,8 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     r-cran-patchwork r-cran-scales \
     \
     r-cran-devtools r-cran-usethis r-cran-testthat r-cran-roxygen2 \
-    r-cran-rmarkdown r-cran-knitr r-cran-pak r-cran-renv \
+    r-cran-rmarkdown r-cran-knitr r-cran-pak r-cran-renv r-cran-bench \
+    r-cran-xptr \
     \
     r-cran-data.table r-cran-arrow \
     r-cran-readxl r-cran-writexl r-cran-haven r-cran-jsonlite r-cran-yaml \
