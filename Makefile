@@ -13,7 +13,8 @@ build:
 	for variant in $(VARIANTS); do \
 		docker build -f "Dockerfile.$$variant" \
 			-t "$(IMAGE_PREFIX)-$$variant:$(VERSION)" \
-			-t "$(IMAGE_PREFIX)-$$variant:latest" .
+			-t "$(IMAGE_PREFIX)-$$variant:latest" \
+			.; \
 	done
 
 REGISTRY ?=
@@ -39,7 +40,7 @@ rm:
 
 scan: build
 	for variant in $(VARIANTS); do \
-		trivy image --severity HIGH,CRITICAL "$(IMAGE_PREFIX)-$$variant:$(VERSION)"
+		trivy image --severity HIGH,CRITICAL "$(IMAGE_PREFIX)-$$variant:$(VERSION)"; \
 	done
 
 lint:
@@ -47,7 +48,7 @@ lint:
 	jq empty settings/settings.json
 	shellcheck entrypoint.sh hooks/*.sh
 	for variant in $(VARIANTS); do \
-		hadolint "Dockerfile.$$variant"
+		hadolint "Dockerfile.$$variant"; \
 	done
 
 IMAGE ?= base
