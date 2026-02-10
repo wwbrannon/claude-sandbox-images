@@ -21,7 +21,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 ###############################################################################
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl wget gnupg gnupg-agent \
+        ca-certificates curl wget gnupg gnupg-agent unattended-upgrades \
         apt-transport-https apt-utils software-properties-common lsb-release \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -224,7 +224,15 @@ RUN npm install -g @anthropic-ai/claude-code
 ENV CLAUDE_ENV_FILE=/etc/sandbox-persistent.sh
 
 ###############################################################################
-# 11. Workspace and entrypoint
+# 11. Security updates
+###############################################################################
+
+RUN apt-get update && \
+    unattended-upgrade -v && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+###############################################################################
+# 12. Workspace and entrypoint
 ###############################################################################
 
 RUN mkdir -p /workspace && chown agent:agent /workspace
