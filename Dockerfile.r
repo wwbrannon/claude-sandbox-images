@@ -1,6 +1,6 @@
 # Claude Code Sandbox - R Variant
 # Base image + R ecosystem
-FROM claude-sandbox-minimal
+FROM claude-sandbox-base
 
 # Switch to root for installations
 USER root

@@ -5,13 +5,6 @@
 
 Lightweight, secure Docker images for running Claude Code in sandboxed environments with defense-in-depth security.
 
-## Available Images
-
-| Image | Base | Description |
-|-------|------|-------------|
-| `claude-sandbox-minimal` | `ubuntu:noble` (24.04 LTS) | Python 3 + data science packages (pandas, numpy, etc.), cloud CLIs (AWS CLI v2, gcloud, az), cloud Python SDKs (boto3, azure-*, google-cloud-*), dev tools (git, gh, ripgrep, fzf, shellcheck, shfmt, git-delta), Node.js, uv, Claude Code |
-| `claude-sandbox-r` | `claude-sandbox-minimal` | Everything in minimal + R ecosystem (r-base, r-base-dev, r-recommended, littler, tidyverse, data.table, devtools, rmarkdown, and more via r2u) |
-
 ## Quick Start
 
 These images are designed to run under [`docker sandbox`](https://docs.docker.com/ai/sandboxes/), which provides microVM isolation with its own Docker daemon.
@@ -19,11 +12,18 @@ These images are designed to run under [`docker sandbox`](https://docs.docker.co
 ```bash
 # Run with docker sandbox
 # use the claude-sandbox-r image instead for R support
-docker sandbox run --load-local-template -t claude-sandbox-minimal claude ./
+docker sandbox run --load-local-template -t claude-sandbox-base claude ./
 
 # dev / debug: tasks not using Claude Code (e.g., verifying installed packages)
-docker run -it -v $(pwd):/workspace claude-sandbox-minimal /bin/bash
+docker run -it -v $(pwd):/workspace claude-sandbox-base /bin/bash
 ```
+
+## Available Images
+
+| Image | Base | Description |
+|-------|------|-------------|
+| `claude-sandbox-base` | `ubuntu:noble` (24.04 LTS) | Python 3 + data science packages (pandas, numpy, etc.), cloud CLIs (AWS CLI v2, gcloud, az), cloud Python SDKs (boto3, azure-*, google-cloud-*), dev tools (git, gh, ripgrep, fzf, shellcheck, shfmt, git-delta), Node.js, uv, Claude Code |
+| `claude-sandbox-r` | `claude-sandbox-base` | Everything in base + R ecosystem (r-base, r-base-dev, r-recommended, littler, tidyverse, data.table, devtools, rmarkdown, and more via r2u) |
 
 ### With Cloud Credentials
 
@@ -35,30 +35,30 @@ docker run -it -v $(pwd):/workspace \
   -e AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY \
   -e AWS_DEFAULT_REGION \
-  claude-sandbox-minimal
+  claude-sandbox-base
 
 # GCP (mount service account key)
 docker run -it -v $(pwd):/workspace \
   -v /path/to/service-account.json:/workspace/.gcp/key.json:ro \
   -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/.gcp/key.json \
-  claude-sandbox-minimal
+  claude-sandbox-base
 
 # Azure
 docker run -it -v $(pwd):/workspace \
   -e AZURE_TENANT_ID \
   -e AZURE_CLIENT_ID \
   -e AZURE_CLIENT_SECRET \
-  claude-sandbox-minimal
+  claude-sandbox-base
 ```
 
 ## Building Images
 
 ```bash
-# Build all images (minimal first, then r)
+# Build all images (base first, then r)
 make build
 
-# Build a single variant (r will build minimal first as a dependency)
-make build IMAGE=minimal
+# Build a single variant (r will build base first as a dependency)
+make build IMAGE=base
 make build IMAGE=r
 
 # Build with a specific version tag
@@ -76,7 +76,7 @@ make test              # Smoke tests against built images
 make scan              # Trivy CVE scan
 make list              # Show built images
 make clean             # Remove built images
-make shell             # Drop into a minimal container
+make shell             # Drop into a base container
 make shell IMAGE=r     # Drop into an R container
 ```
 
@@ -132,7 +132,7 @@ Config files live under `settings/` in the repo; hooks live under `hooks/`. Both
 ### Extending an Image
 
 ```dockerfile
-FROM claude-sandbox-minimal:latest
+FROM claude-sandbox-base:latest
 
 USER root
 RUN apt-get update && apt-get install -y \
@@ -151,7 +151,7 @@ Mount a custom user settings file (cannot override deny rules):
 docker run -it \
   -v $(pwd):/workspace \
   -v $(pwd)/my-settings.json:/home/agent/.claude/settings.json:ro \
-  claude-sandbox-minimal
+  claude-sandbox-base
 ```
 
 To change deny rules, create a custom image with a modified `/etc/claude-code/managed-settings.json`.
@@ -161,7 +161,7 @@ To change deny rules, create a custom image with a modified `/etc/claude-code/ma
 Hooks are bash scripts that receive JSON via stdin and exit 0 (allow) or 1 (deny):
 
 ```dockerfile
-FROM claude-sandbox-minimal:latest
+FROM claude-sandbox-base:latest
 USER root
 COPY my-hook.sh /opt/claude-hooks/pre-command-validator.sh
 RUN chmod 755 /opt/claude-hooks/pre-command-validator.sh && \
@@ -187,7 +187,7 @@ USER agent
 ## Contributing
 
 Contributions welcome! Please:
-1. Test changes with both images (minimal and r)
+1. Test changes with both images (base and r)
 2. Update documentation for any security changes
 3. Follow existing Dockerfile patterns
 4. Add tests for new validation hooks

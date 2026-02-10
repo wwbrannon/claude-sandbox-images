@@ -1,5 +1,5 @@
 VERSION  ?= v1.0
-VARIANTS := minimal r
+VARIANTS := base r
 
 IMAGE_PREFIX := claude-sandbox
 
@@ -50,6 +50,6 @@ lint:
 		hadolint "Dockerfile.$$variant"
 	done
 
-IMAGE ?= minimal
+IMAGE ?= base
 shell:
 	docker run --rm -it $(IMAGE_PREFIX)-$(IMAGE):$(VERSION) /bin/bash
