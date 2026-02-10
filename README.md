@@ -137,7 +137,7 @@ This sandbox implements **defense-in-depth** with four security layers:
 - All other local operations are auto-allowed via `autoAllowBashIfSandboxed`
 - Remote operations (push, publish) are controlled by credential availability, not permission rules
 
-**Why needed**: Defense in depth — deny rules catch dangerous local operations even if the sandbox has a gap
+**Why needed**: Defense in depth -- deny rules catch dangerous local operations even if the sandbox has a gap
 
 ### Layer 4: Validation Hooks (Dynamic Checks)
 **Protects**: Context-specific threats that permission rules can't express
@@ -146,29 +146,15 @@ This sandbox implements **defense-in-depth** with four security layers:
 - Complex validation: parse commands, check symlinks, inspect file sizes
 - Dynamic logic that static rules can't express
 
-## What's Blocked
+### What's Blocked
 
-### Completely Denied
-- **Destructive filesystem**: `rm -rf *`, `chmod 777 *`, `chown *`
-- **Privilege escalation**: `sudo *`, `su *`
-- **Network exfiltration**: `curl`, `wget`, `nc` (except to allowed domains)
-- **Project secrets**: `**/.env`, `**/.env.*`, `**/secrets/**`, `**/credentials/**`
-- **System files**: editing `/etc/**`, `/bin/**`, shell configs
-- **Package managers**: `apt-get install`, `brew install` (use pre-built images)
+**Completely denied**: destructive filesystem ops (`rm -rf`, `chmod 777`, `chown`), privilege escalation (`sudo`, `su`), network exfiltration (`curl`, `wget`, `nc` except to allowed domains), project secrets (`.env`, `secrets/`, `credentials/`), system file editing (`/etc/`, `/bin/`, shell configs), package managers (`apt-get install`, `brew install`).
 
-### Requires Approval
-- **Git state-changing**: `git push`, `git commit`
-- **Package publishing**: `npm publish`, `pip publish`
-- **Docker operations**: `docker push`, `docker login`
-- **Config editing**: `package.json`, `requirements.txt`, `Cargo.toml`
+**Requires approval**: git push/commit, package publishing, Docker operations, config file editing.
 
-### Automatically Allowed
-- **Read operations**: `**/*.py`, `**/*.js`, `**/*.md`
-- **Git read-only**: `git status`, `git diff`, `git log`
-- **Tests/builds**: `npm test`, `pytest`, `cargo build`
-- **Dev tools**: `jq`, `grep`, `tree`, `ls`
+**Automatically allowed**: reading source files, git read-only ops, tests/builds, dev tools.
 
-## Network Access
+### Network Access
 
 Network access is restricted to these domains:
 
@@ -177,31 +163,106 @@ Network access is restricted to these domains:
 - **Cloud providers**: *.amazonaws.com, *.googleapis.com, *.azure.com
 - **Documentation**: stackoverflow.com, stackexchange.com
 
-⚠️ **Note**: Network filtering is best-effort via bubblewrap. Don't rely on it as primary security.
+Network filtering is best-effort via bubblewrap. Don't rely on it as primary security.
+
+### Threat Model
+
+Designed for AI-assisted development where prompt injection is a concern, shared environments needing project isolation, and compliance requirements needing audit trails. NOT designed for untrusted code execution, multi-tenancy at scale, or cryptographic security boundaries.
 
 ## Customization
 
-See [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for detailed instructions on:
-- Creating custom images extending these
-- Modifying permission rules
-- Adding custom hooks
-- Installing additional tools
+### Extending an Image
 
-## Troubleshooting
+The most common customization is extending an existing image with additional tools:
 
-See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for solutions to common issues.
+```dockerfile
+FROM claude-sandbox-minimal:latest
 
-## Architecture
+USER root
 
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and technical details.
+# Install additional system packages
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    redis-tools \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install additional Python packages
+RUN pip3 install --no-cache-dir django celery redis
+
+USER agent
+WORKDIR /workspace
+```
+
+Build and use:
+```bash
+docker build -t my-custom-sandbox .
+docker run -it -v $(pwd):/workspace my-custom-sandbox
+```
+
+### Modifying Permission Rules
+
+You can add allow rules by mounting a custom settings file:
+
+```bash
+docker run -it \
+  -v $(pwd):/workspace \
+  -v $(pwd)/my-settings.json:/home/agent/.claude/settings.json:ro \
+  claude-sandbox-minimal
+```
+
+You CANNOT override deny rules from managed-settings.json. To change deny rules, create a custom image with a modified `/etc/claude-code/managed-settings.json`.
+
+### Custom Hooks
+
+Hooks are bash scripts that receive JSON via stdin and exit 0 (allow) or 1 (deny). To replace the pre-command hook:
+
+```dockerfile
+FROM claude-sandbox-minimal:latest
+
+USER root
+COPY my-hook.sh /opt/claude-hooks/pre-command-validator.sh
+RUN chmod 755 /opt/claude-hooks/pre-command-validator.sh && \
+    chown root:root /opt/claude-hooks/pre-command-validator.sh
+USER agent
+```
+
+### Adding Network Domains
+
+Create a custom image with a modified `managed-settings.json` that extends the `allowedDomains` list in the `sandbox` section.
 
 ## Configuration Files
 
-- **`managed-settings.json`**: Enforced security policies (cannot be overridden by users)
-- **`settings.json`**: User settings template (customizable by users)
-- **`hooks/pre-command-validator.sh`**: Pre-execution validation hook
-- **`hooks/post-command-logger.sh`**: Post-execution audit logging hook
-- **`SANDBOX-CLAUDE.md`**: Claude Code context file (included in all images at `/home/agent/CLAUDE.md`)
+All config files live under `settings/` in the repo and are copied into images at build time:
+
+| File | In-container path | Owner | Purpose |
+|------|-------------------|-------|---------|
+| `managed-settings.json` | `/etc/claude-code/managed-settings.json` | root | Enforced security policies (cannot be overridden) |
+| `settings.json` | `~/.claude/settings.json` | agent | User settings template (customizable) |
+| `hooks/pre-command-validator.sh` | `/opt/claude-hooks/pre-command-validator.sh` | root | Pre-execution validation |
+| `hooks/post-command-logger.sh` | `/opt/claude-hooks/post-command-logger.sh` | root | Audit logging (JSONL to `/var/log/claude-audit/`) |
+| `SANDBOX-CLAUDE.md` | `/home/agent/CLAUDE.md` | agent | Claude Code context file |
+
+## Troubleshooting
+
+### bwrap: Creating new namespace failed
+
+Every bash command fails with `Operation not permitted`. This happens when running under plain `docker run` -- use `docker sandbox` instead, which provides the namespace support bwrap needs. For development tasks that don't need Claude Code, use `make shell` or run binaries directly.
+
+### Permission denied accessing /workspace
+
+Check host file permissions (`chmod +x script.sh`). On Linux with SELinux, add the `:z` flag to the volume mount.
+
+### Hooks failing with "bad interpreter"
+
+Windows line endings (CRLF) in hook scripts. Fix with `dos2unix settings/hooks/*.sh` and rebuild.
+
+### Can't override deny rules
+
+By design. Managed settings are enforced via `allowManagedPermissionRulesOnly: true`. Create a custom image with a modified managed-settings.json if you need different rules.
+
+### Audit logs
+
+Logs are written to `/var/log/claude-audit/command-audit.jsonl` inside the container and auto-rotate after 7 days.
 
 ## Best Practices
 
@@ -209,8 +270,20 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and technical d
 2. **Use environment variables for credentials**: Pass via `-e` flag, not mounted files
 3. **Create custom images for persistence**: Extend these images for additional tools
 4. **Review audit logs regularly**: Check `/var/log/claude-audit/` for unexpected operations
-5. **Understand the security layers**: Each protects against different threats
-6. **Use the right variant**: Choose the minimal image that meets your needs
+
+## FAQ
+
+**Q: Can I install packages at runtime?**
+A: No, package managers are blocked. Create a custom Dockerfile extending these images.
+
+**Q: How do I pass secrets to the container?**
+A: Use environment variables via `-e` flag or docker secrets. Never mount credential files directly.
+
+**Q: What if I need a domain that's not in allowedDomains?**
+A: Create a custom image with modified `managed-settings.json`. Remember: domain filtering is best-effort.
+
+**Q: Why not just use permission rules without the OS sandbox?**
+A: Defense in depth. If permission rules have a bug, the OS sandbox still provides isolation. The sandbox also enables `autoAllowBashIfSandboxed` for better UX.
 
 ## Requirements
 
@@ -227,62 +300,3 @@ Contributions welcome! Please:
 2. Update documentation for any security changes
 3. Follow existing Dockerfile patterns
 4. Add tests for new validation hooks
-
-## Security Considerations
-
-### What This Protects Against
-- ✅ Prompt injection attempts to read project secrets
-- ✅ Command injection in bash commands
-- ✅ Accidental destructive operations
-- ✅ Unauthorized state changes (git push, npm publish)
-- ✅ Resource abuse (reading huge files)
-- ✅ Host system access (via container isolation)
-
-### What This Doesn't Protect Against
-- ❌ Mounting sensitive host directories (user responsibility)
-- ❌ Container escape vulnerabilities (keep Docker updated)
-- ❌ Side-channel attacks or timing attacks
-- ❌ Determined adversaries with physical access
-
-### Threat Model
-
-This sandbox is designed for:
-- **AI-assisted development** where prompt injection is a concern
-- **Shared environments** where isolation between projects is needed
-- **Compliance requirements** needing audit trails
-- **Educational settings** where safety guardrails are helpful
-
-This sandbox is NOT designed for:
-- **Untrusted code execution** (use dedicated sandboxing solutions)
-- **Multi-tenancy** at scale (use proper container orchestration)
-- **Cryptographic security** boundaries (layer additional controls)
-
-## FAQ
-
-**Q: Why not just use permission rules without the OS sandbox?**
-A: Defense in depth. If permission rules have a bug, the OS sandbox still provides isolation. The sandbox also enables `autoAllowBashIfSandboxed` for better UX — remote operations like `git push` and `npm publish` are controlled at the infrastructure level by whether credentials are mounted into the container, which is a stronger boundary than permission rules.
-
-**Q: Can I disable the sandbox to run certain commands?**
-A: No, `allowUnsandboxedCommands: false` is enforced. Git and Docker are excluded from sandboxing for compatibility, but the sandbox boundary cannot be bypassed.
-
-**Q: How do I pass secrets to the container?**
-A: Use environment variables via `-e` flag or docker secrets. Never mount credential files directly.
-
-**Q: Can I install packages at runtime?**
-A: Package managers are blocked. Create a custom Dockerfile extending these images for persistent installations.
-
-**Q: What if I need a domain that's not in allowedDomains?**
-A: Create a custom image with modified `managed-settings.json`. Remember: domain filtering is best-effort.
-
-**Q: How do I view the audit logs?**
-A: Inside the container: `cat /var/log/claude-audit/command-audit.jsonl`
-
-## Support
-
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
-- **Security**: See SECURITY.md for responsible disclosure
-
----
-
-**Remember**: Security is about layers. No single mechanism is perfect, but together they provide robust protection for AI-assisted development workflows.
