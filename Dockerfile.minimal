@@ -25,15 +25,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         apt-transport-https apt-utils software-properties-common lsb-release \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Create non-root agent user and configure sudo
+# Create non-root agent user (no sudo access — privilege escalation blocked)
 RUN userdel ubuntu || true && \
     useradd --create-home --uid 1000 --shell /bin/bash agent && \
     groupadd -f docker && \
-    usermod -aG sudo agent && \
     usermod -aG docker agent && \
-    mkdir -p /etc/sudoers.d && chmod 0755 /etc/sudoers.d && \
-    echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
-    echo 'Defaults:%sudo env_keep += "http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY SSL_CERT_FILE NODE_EXTRA_CA_CERTS REQUESTS_CA_BUNDLE"' > /etc/sudoers.d/proxyconfig && \
     mkdir -p /home/agent/.docker/sandbox/locks && \
     chown -R agent:agent /home/agent && \
     mkdir -p /usr/local/share/npm-global && \
@@ -186,7 +182,7 @@ RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed \
 RUN mkdir -p /home/agent/.claude/hooks /home/agent/.claude/logs /etc/claude-code && \
     chown -R agent:agent /home/agent/.claude
 
-COPY --chown=root:root settings/managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=root:root --chmod=444 settings/managed-settings.json /etc/claude-code/managed-settings.json
 COPY --chown=agent:agent settings/settings.json /home/agent/.claude/settings.json
 COPY --chown=agent:agent hooks/pre-command-validator.sh /home/agent/.claude/hooks/pre-command-validator.sh
 COPY --chown=agent:agent hooks/post-command-logger.sh /home/agent/.claude/hooks/post-command-logger.sh

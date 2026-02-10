@@ -9,21 +9,6 @@
     "deny": [
       {
         "tool": "Bash",
-        "pattern": "rm -rf *",
-        "reason": "Destructive filesystem operation"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "chmod 777 *",
-        "reason": "Insecure permission change"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "chown *",
-        "reason": "Ownership modification blocked"
-      },
-      {
-        "tool": "Bash",
         "pattern": "sudo *",
         "reason": "Privilege escalation blocked"
       },
@@ -38,74 +23,9 @@
         "reason": "Privilege escalation blocked"
       },
       {
-        "tool": "Bash",
-        "pattern": "curl *://*/*",
-        "reason": "Network exfiltration blocked (use sandbox-allowed domains)"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "wget *",
-        "reason": "Network exfiltration blocked (use sandbox-allowed domains)"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "nc *",
-        "reason": "Network exfiltration blocked"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "apt-get install *",
-        "reason": "Package installation blocked (use pre-built image)"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "apt install *",
-        "reason": "Package installation blocked (use pre-built image)"
-      },
-      {
-        "tool": "Bash",
-        "pattern": "brew install *",
-        "reason": "Package installation blocked (use pre-built image)"
-      },
-      {
-        "tool": "Read",
-        "pattern": "**/.env",
-        "reason": "Environment secrets blocked"
-      },
-      {
-        "tool": "Read",
-        "pattern": "**/.env.*",
-        "reason": "Environment secrets blocked"
-      },
-      {
-        "tool": "Read",
-        "pattern": "**/secrets/**",
-        "reason": "Secrets directory access blocked"
-      },
-      {
-        "tool": "Read",
-        "pattern": "**/credentials/**",
-        "reason": "Credentials directory access blocked"
-      },
-      {
         "tool": "Edit",
-        "pattern": "~/.bashrc",
-        "reason": "Shell configuration modification blocked"
-      },
-      {
-        "tool": "Edit",
-        "pattern": "~/.zshrc",
-        "reason": "Shell configuration modification blocked"
-      },
-      {
-        "tool": "Edit",
-        "pattern": "/etc/**",
-        "reason": "System configuration modification blocked"
-      },
-      {
-        "tool": "Edit",
-        "pattern": "/bin/**",
-        "reason": "System binary modification blocked"
+        "pattern": "/etc/claude-code/**",
+        "reason": "Managed settings are read-only (root-owned, 444)"
       }
     ],
 
