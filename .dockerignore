@@ -14,8 +14,6 @@ logs/
 
 # Documentation (not needed in image)
 *.md
-!SANDBOX-README.md
-docs/
 
 # CI/CD
 .github/

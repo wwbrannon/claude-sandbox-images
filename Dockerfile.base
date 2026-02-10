@@ -5,25 +5,125 @@
 # to avoid dependency conflicts with third-party repositories (CRAN, r2u, etc.)
 
 FROM ubuntu:noble
-
-# Environment variables
-ENV DEBIAN_FRONTEND=noninteractive \
-    TERM=xterm-256color \
-    CLAUDE_SANDBOX_MODE=enabled \
-    CLAUDE_AUTO_ALLOW_SANDBOXED=true \
-    NPM_CONFIG_PREFIX=/usr/local/share/npm-global \
-    PATH=/home/agent/.local/bin:/usr/local/share/npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    NO_PROXY=localhost,127.0.0.1,::1,172.17.0.0/16 \
-    no_proxy=localhost,127.0.0.1,::1,172.17.0.0/16
+ENV DEBIAN_FRONTEND=noninteractive
 
 ###############################################################################
-# 1. Bootstrap: minimal deps needed to set up repos and create the agent user
+# 1. Bootstrap: minimal deps needed for further setup
 ###############################################################################
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl wget gnupg gnupg-agent unattended-upgrades \
         apt-transport-https apt-utils software-properties-common lsb-release \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+###############################################################################
+# 2. Configure third-party apt repositories
+###############################################################################
+
+RUN mkdir -p -m 755 /etc/apt/keyrings && mkdir -p -m 755 /etc/apt/sources.list.d \
+    \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor > /etc/apt/keyrings/docker.gpg \
+    && chmod go+r /etc/apt/keyrings/docker.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
+    \
+    && curl -fsLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/keyrings/microsoft.gpg \
+    && chmod go+r /etc/apt/keyrings/microsoft.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list \
+    \
+    && curl -fsLS https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor > /etc/apt/keyrings/google-cloud.gpg \
+    && chmod go+r /etc/apt/keyrings/google-cloud.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/google-cloud.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
+    \
+    && curl -fsLS https://cli.github.com/packages/githubcli-archive-keyring.gpg | gpg --dearmor > /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+
+###############################################################################
+# 3. Install system packages and development tools
+###############################################################################
+
+# do AWS CLI v2 separately below -- no official apt repo
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential gfortran binutils \
+        autoconf automake m4 bison flex gdb libtool linux-headers-generic \
+        git subversion bzr mercurial cvs gh git-lfs git-delta \
+        bzip2 gzip zip unzip zlib1g zlib1g-dev libssl-dev \
+        jq pkg-config cmake shellcheck shfmt exuberant-ctags logrotate cron gosu \
+        less tree dos2unix uni2ascii pv rlwrap locate members diffutils \
+        ripgrep fd-find bat fzf \
+        bubblewrap \
+        vim nano \
+        unixodbc unixodbc-dev sqlite3 mysql-client postgresql-client libpq-dev \
+        pgtop odbc-postgresql \
+        locales tzdata wamerican \
+        libopenblas-dev liblapack-dev libomp-dev libgsl-dev libarpack2-dev \
+        libcurl4-openssl-dev \
+        gnuplot ffmpeg imagemagick pandoc \
+        docker-ce-cli docker-buildx-plugin docker-compose-plugin \
+        bc dnsutils lsof man-db procps psmisc rsync socat \
+        nodejs npm \
+        python3 python3-pip python3-dev python3-venv pipx \
+        \
+        google-cloud-cli azure-cli \
+    \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    \
+    && curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "/tmp/awscliv2.zip" \
+    && unzip /tmp/awscliv2.zip -d /tmp \
+    && /tmp/aws/install \
+    && rm -rf /tmp/awscliv2.zip /tmp/aws
+
+###############################################################################
+# 4. Install python packages
+# Including python packages for cloud CLIs / SDKs
+###############################################################################
+
+# NOTE: "--break-system-packages" is fine, this is a container
+# NOTE: uv isn't in the system package repos
+RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed \
+    ipython cython \
+    pytest pytest-cov \
+    mypy black pylint flake8 \
+    requests \
+    pyyaml unidecode xlrd psycopg2-binary sqlalchemy jinja2 \
+    pandas numpy scipy scikit-learn statsmodels patsy networkx nltk spacy \
+    matplotlib seaborn \
+    boto3 \
+    azure-storage-blob azure-identity \
+    google-cloud-storage google-cloud-bigquery google-cloud-compute \
+    \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv \
+    && chmod +x /usr/local/bin/uv
+
+###############################################################################
+# 5. System-wide configuration
+###############################################################################
+
+RUN locale-gen en_US.UTF-8
+
+ENV PATH=/home/agent/.local/bin:/usr/local/share/npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
+    \
+    TERM=xterm-256color \
+    \
+    NPM_CONFIG_PREFIX=/usr/local/share/npm-global \
+    \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+COPY settings/gitconfig /etc/gitconfig
+
+###############################################################################
+# 6. Create agent user and set up Docker sandbox environment plumbing
+###############################################################################
 
 # Create non-root agent user (no sudo access — privilege escalation blocked)
 RUN userdel ubuntu || true && \
@@ -35,10 +135,6 @@ RUN userdel ubuntu || true && \
     mkdir -p /usr/local/share/npm-global && \
     chown -R agent:agent /usr/local/share/npm-global
 
-###############################################################################
-# 2. Docker sandbox persistent environment plumbing
-###############################################################################
-
 RUN touch /etc/sandbox-persistent.sh && \
     chmod 644 /etc/sandbox-persistent.sh && \
     chown agent:agent /etc/sandbox-persistent.sh
@@ -46,8 +142,7 @@ RUN touch /etc/sandbox-persistent.sh && \
 ENV BASH_ENV=/etc/sandbox-persistent.sh
 
 # profile.d hook (login shells)
-COPY settings/sandbox-persistent-source.sh /etc/profile.d/sandbox-persistent.sh
-RUN chmod 644 /etc/profile.d/sandbox-persistent.sh
+COPY --chmod=644 settings/sandbox-persistent-source.sh /etc/profile.d/sandbox-persistent.sh
 
 # System bashrc (interactive shells) - prepend sandbox sourcing
 RUN cat /etc/profile.d/sandbox-persistent.sh /etc/bash.bashrc > /tmp/new-bashrc && \
@@ -58,181 +153,48 @@ RUN cat /etc/profile.d/sandbox-persistent.sh /etc/bash.bashrc > /tmp/new-bashrc 
 COPY --chown=agent:agent settings/sandbox-persistent-source.sh /home/agent/.bashrc
 
 ###############################################################################
-# 3. Configure third-party apt repositories
+# 7. Claude Code configuration
 ###############################################################################
-
-RUN mkdir -p -m 755 /etc/apt/keyrings && mkdir -p -m 755 /etc/apt/sources.list.d
-
-## Docker
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-        gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
-    chmod a+r /etc/apt/keyrings/docker.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-        > /etc/apt/sources.list.d/docker.list
-
-## R Project's official R
-RUN curl -fsLS https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor > /etc/apt/keyrings/cran-ubuntu.gpg \
-    && chmod go+r /etc/apt/keyrings/cran-ubuntu.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cran-ubuntu.gpg] https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" | tee /etc/apt/sources.list.d/cran.list > /dev/null
-
-## r2u: pre-compiled CRAN packages as .deb
-RUN curl -fsLS https://eddelbuettel.github.io/r2u/assets/dirk_eddelbuettel_key.asc | gpg --dearmor > /etc/apt/keyrings/cranapt_key.gpg \
-    && chmod go+r /etc/apt/keyrings/cranapt_key.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cranapt_key.gpg] https://r2u.stat.illinois.edu/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/cranapt.list
-
-## Azure CLI
-RUN curl -fsLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/keyrings/microsoft.gpg && \
-    chmod go+r /etc/apt/keyrings/microsoft.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list
-
-## Google Cloud CLI
-RUN curl -fsLS https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor > /etc/apt/keyrings/google-cloud.gpg \
-    && chmod go+r /etc/apt/keyrings/google-cloud.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/google-cloud.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google-cloud-sdk.list
-
-## GitHub CLI (https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian)
-RUN curl -fsLS https://cli.github.com/packages/githubcli-archive-keyring.gpg > /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
-    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-
-###############################################################################
-# 4. Install system packages and development tools
-###############################################################################
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gfortran binutils \
-    autoconf automake m4 bison flex gdb libtool linux-headers-generic \
-    git subversion bzr mercurial cvs gh git-lfs git-delta \
-    bzip2 gzip zip unzip zlib1g zlib1g-dev libssl-dev \
-    jq pkg-config cmake shellcheck shfmt exuberant-ctags logrotate cron gosu \
-    less tree dos2unix uni2ascii pv rlwrap locate members diffutils \
-    ripgrep fd-find bat fzf \
-    bubblewrap \
-    vim nano \
-    unixodbc unixodbc-dev sqlite3 mysql-client postgresql-client libpq-dev \
-    pgtop odbc-postgresql \
-    ca-certificates locales tzdata wamerican sudo \
-    libopenblas-dev liblapack-dev libomp-dev libgsl-dev libarpack2-dev \
-    libcurl4-openssl-dev \
-    gnuplot ffmpeg imagemagick pandoc \
-    docker-ce-cli docker-buildx-plugin docker-compose-plugin \
-    bc dnsutils lsof man-db procps psmisc rsync socat \
-    nodejs npm \
-    python3 python3-pip python3-dev python3-venv pipx \
-    \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-###############################################################################
-# 5. Locale
-###############################################################################
-
-RUN locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
-
-###############################################################################
-# 6. Python ecosystem
-###############################################################################
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    mv /root/.local/bin/uv /usr/local/bin/uv && \
-    chmod +x /usr/local/bin/uv
-
-# Install Python packages
-RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed \
-    ipython cython \
-    pytest pytest-cov \
-    mypy black pylint flake8 \
-    requests \
-    pyyaml unidecode xlrd psycopg2-binary sqlalchemy jinja2 \
-    pandas numpy scipy scikit-learn statsmodels patsy networkx nltk spacy \
-    matplotlib seaborn
-
-###############################################################################
-# 7. Cloud CLIs and SDKs
-###############################################################################
-
-RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    google-cloud-cli azure-cli && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# AWS CLI v2 -- no official apt repo
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "/tmp/awscliv2.zip" && \
-    unzip /tmp/awscliv2.zip -d /tmp && \
-    /tmp/aws/install && \
-    rm -rf /tmp/awscliv2.zip /tmp/aws
-
-# Cloud Python SDKs
-RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed \
-    boto3 \
-    azure-storage-blob azure-identity \
-    google-cloud-storage google-cloud-bigquery google-cloud-compute
-
-###############################################################################
-# 8. Claude Code configuration
-###############################################################################
-
-RUN mkdir -p /home/agent/.claude /etc/claude-code && \
-    chown -R agent:agent /home/agent/.claude
-
-# Hook scripts: root-owned so agent can execute but not modify
-RUN mkdir -p /opt/claude-hooks
-COPY --chown=root:root hooks/pre-command-validator.sh /opt/claude-hooks/pre-command-validator.sh
-COPY --chown=root:root hooks/post-command-logger.sh /opt/claude-hooks/post-command-logger.sh
-RUN chmod 755 /opt/claude-hooks/*.sh
 
 # Audit log directory: sticky bit prevents agent from deleting root-owned files
-RUN mkdir -p /var/log/claude-audit && \
-    chown root:agent /var/log/claude-audit && \
-    chmod 1770 /var/log/claude-audit
 
+RUN mkdir -p /home/agent/.claude /etc/claude-code \
+    && chown -R agent:agent /home/agent/.claude \
+    && mkdir -p /var/log/claude-audit \
+    && chown root:agent /var/log/claude-audit \
+    && chmod 1770 /var/log/claude-audit
+
+# Hook scripts: root-owned so agent can execute but not modify
+COPY --chown=root:root --chmod=755 hooks/pre-command-validator.sh /opt/claude-hooks/pre-command-validator.sh
+COPY --chown=root:root --chmod=755 hooks/post-command-logger.sh /opt/claude-hooks/post-command-logger.sh
+
+# Other settings
 COPY --chown=root:root --chmod=444 settings/managed-settings.json /etc/claude-code/managed-settings.json
 COPY --chown=agent:agent settings/settings.json /home/agent/.claude/settings.json
-
-COPY --chown=root:root settings/logrotate-claude /etc/logrotate.d/claude
-RUN chmod 644 /etc/logrotate.d/claude
-
-COPY --chown=root:root entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
+COPY --chown=root:root --chmod=644 settings/logrotate-claude /etc/logrotate.d/claude
+COPY --chown=root:root --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --chown=agent:agent settings/SANDBOX-CLAUDE.md /home/agent/CLAUDE.md
 
 ###############################################################################
-# 9. Git configuration
+# 8. Install Claude Code (as agent user)
 ###############################################################################
 
-RUN git config --system core.pager "delta" && \
-    git config --system interactive.diffFilter "delta --color-only" && \
-    git config --system delta.navigate true && \
-    git config --system delta.side-by-side true && \
-    git config --system merge.conflictstyle diff3 && \
-    git config --system diff.colorMoved default
-
-###############################################################################
-# 10. Install Claude Code (as agent user)
-###############################################################################
-
+# TODO: start using newer claude code installer
 RUN npm install -g @anthropic-ai/claude-code
 
-ENV CLAUDE_ENV_FILE=/etc/sandbox-persistent.sh
+ENV CLAUDE_ENV_FILE=/etc/sandbox-persistent.sh \
+    CLAUDE_SANDBOX_MODE=enabled \
+    CLAUDE_AUTO_ALLOW_SANDBOXED=true
 
 ###############################################################################
-# 11. Security updates
+# 9. Security updates
 ###############################################################################
 
-RUN apt-get update && \
-    unattended-upgrade -v && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && unattended-upgrade -v && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ###############################################################################
-# 12. Workspace and entrypoint
+# 10. Workspace and entrypoint
 ###############################################################################
 
 RUN mkdir -p /workspace && chown agent:agent /workspace

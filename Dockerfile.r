@@ -5,6 +5,17 @@ FROM claude-sandbox-base
 # Switch to root for installations
 USER root
 
+# Set up apt repos for updated R and CRAN packages
+RUN mkdir -p -m 755 /etc/apt/keyrings && mkdir -p -m 755 /etc/apt/sources.list.d \
+    \
+    && curl -fsLS https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor > /etc/apt/keyrings/cran-ubuntu.gpg \
+    && chmod go+r /etc/apt/keyrings/cran-ubuntu.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/cran-ubuntu.gpg] https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" > /etc/apt/sources.list.d/cran.list \
+    \
+    && curl -fsLS https://eddelbuettel.github.io/r2u/assets/dirk_eddelbuettel_key.asc | gpg --dearmor > /etc/apt/keyrings/r2u.gpg \
+    && chmod go+r /etc/apt/keyrings/r2u.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/r2u.gpg] https://r2u.stat.illinois.edu/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/r2u.list
+
 ## Install lib dependencies, R/headers/base+recommended, CRAN packages
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
