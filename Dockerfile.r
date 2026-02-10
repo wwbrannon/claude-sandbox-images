@@ -12,7 +12,9 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     \
     r-base r-base-dev r-recommended littler \
     \
-    r-cran-tidyverse \
+    r-cran-tidyverse r-cran-r6 \
+    \
+    r-cran-cli r-cran-docopt r-cran-optparse r-cran-getopt \
     \
     r-cran-patchwork r-cran-scales \
     \
