@@ -57,10 +57,6 @@ docker run -it -v $(pwd):/workspace \
 # Build all images (base first, then r)
 make build
 
-# Build a single variant (r will build base first as a dependency)
-make build IMAGE=base
-make build IMAGE=r
-
 # Build with a specific version tag
 make build VERSION=v2.0
 
@@ -71,13 +67,16 @@ make push REGISTRY=ghcr.io/youruser VERSION=v2.0
 ### Other Targets
 
 ```bash
-make lint              # ShellCheck, hadolint, JSON validation
-make test              # Smoke tests against built images
-make scan              # Trivy CVE scan
-make list              # Show built images
-make clean             # Remove built images
-make shell             # Drop into a base container
-make shell IMAGE=r     # Drop into an R container
+$ make help  # Run `make help` for an overview of targets
+Development Commands
+
+  build           Build all containers
+  help            Show this help message
+  lint            Run shellcheck, hadolint, etc.
+  push            Push the containers to the registry given by the REGISTRY env variable
+  rm              Delete the built containers
+  scan            Scan containers for security vulnerabilities with trivy
+  shell           Run a shell in the container given by IMAGE (default base)
 ```
 
 ## Security Model
@@ -123,9 +122,13 @@ Config files live under `settings/` in the repo; hooks live under `hooks/`. Both
 |------|-------------------|-------|---------|
 | `settings/managed-settings.json` | `/etc/claude-code/managed-settings.json` | root (444) | Enforced security policies |
 | `settings/settings.json` | `~/.claude/settings.json` | agent | User settings template |
+| `settings/SANDBOX-CLAUDE.md` | `/home/agent/CLAUDE.md` | agent | Claude Code context file |
+| `settings/gitconfig` | `/etc/gitconfig` | root (644) | System-wide git configuration |
+| `settings/logrotate-claude` | `/etc/logrotate.d/claude` | root (644) | Audit log rotation config |
+| `settings/sandbox-persistent-source.sh` | `/etc/profile.d/sandbox-persistent.sh` | root (644) | Sources sandbox env file in shells |
 | `hooks/pre-command-validator.sh` | `/opt/claude-hooks/pre-command-validator.sh` | root (755) | Pre-execution validation |
 | `hooks/post-command-logger.sh` | `/opt/claude-hooks/post-command-logger.sh` | root (755) | Audit logging |
-| `settings/SANDBOX-CLAUDE.md` | `/home/agent/CLAUDE.md` | agent | Claude Code context file |
+| `entrypoint.sh` | `/usr/local/bin/entrypoint.sh` | root (755) | Starts cron, creates logs, drops to agent |
 
 ## Customization
 
