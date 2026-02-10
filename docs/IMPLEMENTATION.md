@@ -18,7 +18,6 @@ This document summarizes the implementation of the Claude Code Sandbox Docker Im
   - All local operations auto-allowed (sandbox philosophy: local ops are safe and reversible)
   - Sandbox configuration with allowedDomains (including CRAN mirrors, PyPI CDN)
   - Hook configuration
-  - MCP restrictions
 
 - [x] `settings/settings.json` - User settings template
   - Model selection with support for Sonnet, Opus, and Haiku

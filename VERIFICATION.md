@@ -131,7 +131,7 @@ Start a container and verify:
 - [ ] File exists at `/etc/claude-code/managed-settings.json`
 - [ ] File is owned by root
 - [ ] File is valid JSON
-- [ ] Contains expected sections: permissionRules, sandbox, hooks, mcp
+- [ ] Contains expected sections: permissionRules, sandbox, hooks
 
 ```bash
 # Start container

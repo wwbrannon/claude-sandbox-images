@@ -61,10 +61,5 @@
         ]
       }
     ]
-  },
-
-  "mcp": {
-    "allowed": ["memory", "github"],
-    "denied": ["filesystem", "shell"]
   }
 }
