@@ -199,7 +199,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN chmod +x /home/agent/.claude/hooks/*.sh
 
-COPY --chown=agent:agent settings/SANDBOX-README.md /home/agent/README.md
+COPY --chown=agent:agent settings/SANDBOX-CLAUDE.md /home/agent/CLAUDE.md
 
 ###############################################################################
 # 9. Git configuration

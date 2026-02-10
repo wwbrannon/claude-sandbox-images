@@ -201,7 +201,7 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and technical d
 - **`settings.json`**: User settings template (customizable by users)
 - **`hooks/pre-command-validator.sh`**: Pre-execution validation hook
 - **`hooks/post-command-logger.sh`**: Post-execution audit logging hook
-- **`SANDBOX-README.md`**: User guide (included in all images at `/home/agent/README.md`)
+- **`SANDBOX-CLAUDE.md`**: Claude Code context file (included in all images at `/home/agent/CLAUDE.md`)
 
 ## Best Practices
 
