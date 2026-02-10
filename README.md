@@ -17,21 +17,11 @@ Lightweight, secure Docker images for running Claude Code in sandboxed environme
 These images are designed to run under [`docker sandbox`](https://docs.docker.com/ai/sandboxes/), which provides microVM isolation with its own Docker daemon.
 
 ```bash
-# Run with docker sandbox (recommended)
-docker sandbox start my-sandbox --image claude-sandbox-minimal
+# Run with docker sandbox
+# use the claude-sandbox-r image instead for R support
+docker sandbox run --load-local-template -t claude-sandbox-minimal claude ./
 
-# Pass arguments to Claude Code after --
-docker sandbox start my-sandbox --image claude-sandbox-minimal -- --dangerously-skip-permissions
-
-# Run with R support
-docker sandbox start my-sandbox --image claude-sandbox-r
-```
-
-### Development / Debugging (plain Docker)
-
-For tasks that don't involve Claude Code (e.g., verifying installed packages):
-
-```bash
+# dev / debug: tasks not using Claude Code (e.g., verifying installed packages)
 docker run -it -v $(pwd):/workspace claude-sandbox-minimal /bin/bash
 ```
 
@@ -81,11 +71,11 @@ make push REGISTRY=ghcr.io/youruser VERSION=v2.0
 ### Other Targets
 
 ```bash
-make lint      # ShellCheck, hadolint, JSON validation
-make test      # Smoke tests against built images
-make scan      # Trivy CVE scan
-make list      # Show built images
-make clean     # Remove built images
+make lint              # ShellCheck, hadolint, JSON validation
+make test              # Smoke tests against built images
+make scan              # Trivy CVE scan
+make list              # Show built images
+make clean             # Remove built images
 make shell             # Drop into a minimal container
 make shell IMAGE=r     # Drop into an R container
 ```
@@ -192,23 +182,7 @@ USER agent
 1. **Don't mount sensitive directories**: Keep ~/.ssh, ~/.aws, etc. off the container
 2. **Use environment variables for credentials**: Pass via `-e` flag, not mounted files
 3. **Create custom images for persistence**: Extend these images for additional tools
-4. **Review audit logs regularly**: Check `/var/log/claude-audit/` for unexpected operations
-
-## FAQ
-
-**Q: Can I install packages at runtime?**
-A: Yes, package managers are not blocked. But packages won't persist across container restarts -- create a custom Dockerfile for anything you need long-term.
-
-**Q: How do I pass secrets to the container?**
-A: Use environment variables via `-e` flag or docker secrets. Never mount credential files directly.
-
-## Requirements
-
-- Docker 20.10 or later
-
-## License
-
-MIT License - see LICENSE file for details
+4. **Review audit logs** when security is important: Check `/var/log/claude-audit/` for unexpected operations
 
 ## Contributing
 
