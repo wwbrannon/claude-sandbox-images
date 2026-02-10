@@ -169,13 +169,13 @@ Commands appear to run but produce no output or effect
 **Diagnostic steps**:
 ```bash
 # Check hook debug log
-cat ~/.claude/logs/hook-debug.log
+cat /var/log/claude-audit/hook-debug.log
 
 # Check if sandbox is enabled
 cat /etc/claude-code/managed-settings.json | jq '.sandbox.enabled'
 
 # Check audit log for the operation
-cat ~/.claude/logs/command-log-$(date +%Y-%m-%d).jsonl | tail -20
+cat /var/log/claude-audit/command-audit.jsonl | tail -20
 ```
 
 ## Configuration Issues
@@ -215,10 +215,10 @@ Expected hook behavior not occurring
 **Diagnostic**:
 ```bash
 # Check if hooks exist
-ls -la /home/agent/.claude/hooks/
+ls -la /opt/claude-hooks/
 
 # Check if hooks are executable
-docker exec <container-id> test -x /home/agent/.claude/hooks/pre-command-validator.sh
+docker exec <container-id> test -x /opt/claude-hooks/pre-command-validator.sh
 echo $?  # Should be 0
 
 # Check hook configuration
@@ -408,14 +408,14 @@ docker build -f Dockerfile.minimal -t claude-sandbox-minimal .
 ### Audit logs filling disk
 
 **Symptom**:
-`~/.claude/logs/` consuming too much space
+`/var/log/claude-audit/` consuming too much space
 
 **Expected behavior**: Logs rotate after 7 days automatically
 
 **Manual cleanup**:
 ```bash
 # Delete old logs manually
-docker exec <container-id> find ~/.claude/logs -name "*.jsonl" -mtime +7 -delete
+docker exec <container-id> find /var/log/claude-audit -name "*.jsonl" -mtime +7 -delete
 
 # Or adjust rotation in post-command-logger.sh
 ```
@@ -506,14 +506,14 @@ docker inspect <container-id>
 
 ```bash
 # View hook debug log
-docker exec <container-id> cat ~/.claude/logs/hook-debug.log
+docker exec <container-id> cat /var/log/claude-audit/hook-debug.log
 
 # View audit log
-docker exec <container-id> cat ~/.claude/logs/command-log-$(date +%Y-%m-%d).jsonl | jq .
+docker exec <container-id> cat /var/log/claude-audit/command-audit.jsonl | jq .
 
 # Test hook manually
 echo '{"tool":"Bash","parameters":{"command":"echo test"}}' | \
-  docker exec -i <container-id> /home/agent/.claude/hooks/pre-command-validator.sh
+  docker exec -i <container-id> /opt/claude-hooks/pre-command-validator.sh
 echo $?  # 0 = passed, 1 = denied
 ```
 
@@ -553,8 +553,8 @@ cat file.py  # File reading
 4. Complete error message
 5. Steps to reproduce
 6. Contents of relevant logs:
-   - `~/.claude/logs/hook-debug.log`
-   - `~/.claude/logs/command-log-*.jsonl`
+   - `/var/log/claude-audit/hook-debug.log`
+   - `/var/log/claude-audit/command-audit.jsonl`
    - Docker logs: `docker logs <container-id>`
 
 ### Useful commands for diagnostics

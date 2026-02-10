@@ -181,9 +181,9 @@ FROM claude-sandbox-python:latest
 USER root
 
 # Copy custom hook
-COPY custom-hooks/no-push-to-main.sh /home/agent/.claude/hooks/pre-command-validator.sh
-RUN chmod +x /home/agent/.claude/hooks/pre-command-validator.sh
-RUN chown agent:agent /home/agent/.claude/hooks/pre-command-validator.sh
+COPY custom-hooks/no-push-to-main.sh /opt/claude-hooks/pre-command-validator.sh
+RUN chmod 755 /opt/claude-hooks/pre-command-validator.sh
+RUN chown root:root /opt/claude-hooks/pre-command-validator.sh
 
 USER agent
 ```
@@ -199,10 +199,10 @@ To run multiple hooks, create a wrapper:
 INPUT=$(cat)
 
 # Run original validator
-echo "$INPUT" | /home/agent/.claude/hooks/original-validator.sh || exit 1
+echo "$INPUT" | /opt/claude-hooks/original-validator.sh || exit 1
 
 # Run custom validator
-echo "$INPUT" | /home/agent/.claude/hooks/custom-validator.sh || exit 1
+echo "$INPUT" | /opt/claude-hooks/custom-validator.sh || exit 1
 
 # All passed
 exit 0
@@ -222,7 +222,7 @@ INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool')
 
 # Run original logger
-echo "$INPUT" | /home/agent/.claude/hooks/original-logger.sh
+echo "$INPUT" | /opt/claude-hooks/original-logger.sh
 
 # Send sensitive operations to Slack
 if [ "$TOOL" = "Bash" ]; then
@@ -503,7 +503,7 @@ CONTAINER=$(docker run -d "$IMAGE_NAME" sleep 60)
 # Test 3: Files exist
 docker exec "$CONTAINER" test -f /etc/claude-code/managed-settings.json
 docker exec "$CONTAINER" test -f /home/agent/.claude/settings.json
-docker exec "$CONTAINER" test -x /home/agent/.claude/hooks/pre-command-validator.sh
+docker exec "$CONTAINER" test -x /opt/claude-hooks/pre-command-validator.sh
 
 # Test 4: Tools are installed
 docker exec "$CONTAINER" git --version
@@ -641,9 +641,9 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
 
 # Copy custom configuration
 COPY custom-settings.json /home/agent/.claude/custom-settings.json
-COPY custom-hooks/ /home/agent/.claude/hooks/
-RUN chown -R agent:agent /home/agent/.claude && \
-    chmod +x /home/agent/.claude/hooks/*.sh
+COPY custom-hooks/ /opt/claude-hooks/
+RUN chown -R root:root /opt/claude-hooks && \
+    chmod 755 /opt/claude-hooks/*.sh
 
 # Set project environment
 ENV PROJECT_NAME=myproject \

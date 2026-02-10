@@ -1,23 +1,57 @@
 # Logrotate configuration for Claude Code sandbox logs
 # Place in /etc/logrotate.d/claude
 
-/home/agent/.claude/logs/command-log-*.jsonl {
+/var/log/claude-audit/command-audit.jsonl {
     daily
     rotate 7
     missingok
     notifempty
     compress
     delaycompress
+    dateext
+    su root agent
+    create 0660 root agent
     sharedscripts
-    su agent agent
+    postrotate
+        chattr +a /var/log/claude-audit/command-audit.jsonl 2>/dev/null || true
+    endscript
+    prerotate
+        chattr -a /var/log/claude-audit/command-audit.jsonl 2>/dev/null || true
+    endscript
 }
 
-/home/agent/.claude/logs/sensitive-ops.log {
+/var/log/claude-audit/sensitive-ops.log {
     daily
     rotate 30
     missingok
     notifempty
     compress
     delaycompress
-    su agent agent
+    dateext
+    su root agent
+    create 0660 root agent
+    postrotate
+        chattr +a /var/log/claude-audit/sensitive-ops.log 2>/dev/null || true
+    endscript
+    prerotate
+        chattr -a /var/log/claude-audit/sensitive-ops.log 2>/dev/null || true
+    endscript
+}
+
+/var/log/claude-audit/hook-debug.log {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    dateext
+    su root agent
+    create 0660 root agent
+    postrotate
+        chattr +a /var/log/claude-audit/hook-debug.log 2>/dev/null || true
+    endscript
+    prerotate
+        chattr -a /var/log/claude-audit/hook-debug.log 2>/dev/null || true
+    endscript
 }

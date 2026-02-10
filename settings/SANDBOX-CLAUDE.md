@@ -7,12 +7,9 @@ You are running inside a sandboxed Docker container. Your project is mounted at 
 Security policies are enforced via managed settings at `/etc/claude-code/managed-settings.json`. You cannot override them.
 
 **Denied** (will fail immediately):
-- Destructive filesystem ops (`rm -rf`, `chmod 777`, `chown`)
-- Privilege escalation (`sudo`, `su`)
-- Network tools (`curl`, `wget`, `nc`) except to allowed domains
-- Package installation (`apt-get install`, `brew install`) -- use what's pre-installed
-- Reading secrets (`.env`, `.env.*`, `secrets/`, `credentials/`)
-- Editing system files (`/etc/`, `/bin/`, shell configs)
+- Privilege escalation (`sudo`, `su`, `gosu`)
+- Editing managed settings (`/etc/claude-code/**`)
+- Editing hook scripts (`/opt/claude-hooks/**`)
 
 **Controlled by credentials** (allowed if credentials are mounted, impossible otherwise):
 - Git push (requires SSH key or token)
@@ -36,5 +33,5 @@ The image includes: Python 3 with data science packages (pandas, numpy, scipy, s
 
 - Managed settings: `/etc/claude-code/managed-settings.json`
 - User settings: `~/.claude/settings.json`
-- Audit logs: `~/.claude/logs/`
-- Hooks: `~/.claude/hooks/`
+- Hook scripts: `/opt/claude-hooks/` (root-owned, read-only)
+- Audit logs: `/var/log/claude-audit/` (root-owned directory, append-only)

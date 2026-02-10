@@ -330,7 +330,7 @@ RUN pip3 install --no-cache-dir package1 package2
   - Source: `settings/managed-settings.json` in repository
 - **User settings**: `~/.claude/settings.json` (agent-owned, mutable)
   - Source: `settings/settings.json` in repository
-- **Hooks**: `/home/agent/.claude/hooks/` (agent-owned, managed)
+- **Hooks**: `/opt/claude-hooks/` (root-owned, executable by agent)
   - Source: `settings/hooks/` in repository
 
 **Rationale**:

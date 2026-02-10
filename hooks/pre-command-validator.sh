@@ -13,7 +13,7 @@ TOOL=$(echo "$INPUT" | jq -r '.tool')
 PARAMS=$(echo "$INPUT" | jq -r '.parameters // {}')
 
 # Log to hook debug file for troubleshooting
-echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] PRE-HOOK: tool=$TOOL" >> ~/.claude/logs/hook-debug.log
+echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] PRE-HOOK: tool=$TOOL" >> /var/log/claude-audit/hook-debug.log
 
 # Validation: Bash command injection patterns
 if [ "$TOOL" = "Bash" ]; then

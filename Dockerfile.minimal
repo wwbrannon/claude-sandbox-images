@@ -179,21 +179,28 @@ RUN pip3 install --no-cache-dir --break-system-packages --ignore-installed \
 # 8. Claude Code configuration
 ###############################################################################
 
-RUN mkdir -p /home/agent/.claude/hooks /home/agent/.claude/logs /etc/claude-code && \
+RUN mkdir -p /home/agent/.claude /etc/claude-code && \
     chown -R agent:agent /home/agent/.claude
+
+# Hook scripts: root-owned so agent can execute but not modify
+RUN mkdir -p /opt/claude-hooks
+COPY --chown=root:root hooks/pre-command-validator.sh /opt/claude-hooks/pre-command-validator.sh
+COPY --chown=root:root hooks/post-command-logger.sh /opt/claude-hooks/post-command-logger.sh
+RUN chmod 755 /opt/claude-hooks/*.sh
+
+# Audit log directory: sticky bit prevents agent from deleting root-owned files
+RUN mkdir -p /var/log/claude-audit && \
+    chown root:agent /var/log/claude-audit && \
+    chmod 1770 /var/log/claude-audit
 
 COPY --chown=root:root --chmod=444 settings/managed-settings.json /etc/claude-code/managed-settings.json
 COPY --chown=agent:agent settings/settings.json /home/agent/.claude/settings.json
-COPY --chown=agent:agent hooks/pre-command-validator.sh /home/agent/.claude/hooks/pre-command-validator.sh
-COPY --chown=agent:agent hooks/post-command-logger.sh /home/agent/.claude/hooks/post-command-logger.sh
 
 COPY --chown=root:root settings/logrotate-claude /etc/logrotate.d/claude
 RUN chmod 644 /etc/logrotate.d/claude
 
 COPY --chown=root:root entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
-
-RUN chmod +x /home/agent/.claude/hooks/*.sh
 
 COPY --chown=agent:agent settings/SANDBOX-CLAUDE.md /home/agent/CLAUDE.md
 

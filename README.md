@@ -208,7 +208,7 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for design decisions and technical d
 1. **Don't mount sensitive directories**: Keep ~/.ssh, ~/.aws, etc. off the container
 2. **Use environment variables for credentials**: Pass via `-e` flag, not mounted files
 3. **Create custom images for persistence**: Extend these images for additional tools
-4. **Review audit logs regularly**: Check `~/.claude/logs/` for unexpected operations
+4. **Review audit logs regularly**: Check `/var/log/claude-audit/` for unexpected operations
 5. **Understand the security layers**: Each protects against different threats
 6. **Use the right variant**: Choose the minimal image that meets your needs
 
@@ -275,7 +275,7 @@ A: Package managers are blocked. Create a custom Dockerfile extending these imag
 A: Create a custom image with modified `managed-settings.json`. Remember: domain filtering is best-effort.
 
 **Q: How do I view the audit logs?**
-A: Inside the container: `cat ~/.claude/logs/command-log-$(date +%Y-%m-%d).jsonl`
+A: Inside the container: `cat /var/log/claude-audit/command-audit.jsonl`
 
 ## Support
 

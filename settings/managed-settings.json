@@ -26,6 +26,11 @@
         "tool": "Edit",
         "pattern": "/etc/claude-code/**",
         "reason": "Managed settings are read-only (root-owned, 444)"
+      },
+      {
+        "tool": "Edit",
+        "pattern": "/opt/claude-hooks/**",
+        "reason": "Hook scripts are read-only (root-owned, 755)"
       }
     ],
 
@@ -45,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/agent/.claude/hooks/pre-command-validator.sh"
+            "command": "/opt/claude-hooks/pre-command-validator.sh"
           }
         ]
       }
@@ -56,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/agent/.claude/hooks/post-command-logger.sh"
+            "command": "/opt/claude-hooks/post-command-logger.sh"
           }
         ]
       }

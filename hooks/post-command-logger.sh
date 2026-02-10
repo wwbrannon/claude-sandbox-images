@@ -8,11 +8,9 @@ set -euo pipefail
 # Read JSON input from stdin (includes tool, parameters, and result)
 INPUT=$(cat)
 
-# Create logs directory if it doesn't exist
-mkdir -p ~/.claude/logs
-
-# Log file with date
-LOG_FILE=~/.claude/logs/command-log-$(date +%Y-%m-%d).jsonl
+# Log paths (pre-created by entrypoint as root:agent 0660)
+LOG_FILE=/var/log/claude-audit/command-audit.jsonl
+SENSITIVE_LOG=/var/log/claude-audit/sensitive-ops.log
 
 # Extract fields
 TOOL=$(echo "$INPUT" | jq -r '.tool')
@@ -36,17 +34,17 @@ if [ "$TOOL" = "Bash" ]; then
 
     # Alert on git push
     if echo "$COMMAND" | grep -q '^git push'; then
-        echo "[ALERT] Git push operation: $COMMAND" >> ~/.claude/logs/sensitive-ops.log
+        echo "[ALERT] Git push operation: $COMMAND" >> "$SENSITIVE_LOG"
     fi
 
     # Alert on package publishing
     if echo "$COMMAND" | grep -qE '^(npm|pip|cargo) publish'; then
-        echo "[ALERT] Package publish operation: $COMMAND" >> ~/.claude/logs/sensitive-ops.log
+        echo "[ALERT] Package publish operation: $COMMAND" >> "$SENSITIVE_LOG"
     fi
 
     # Alert on docker push/login
     if echo "$COMMAND" | grep -qE '^docker (push|login)'; then
-        echo "[ALERT] Docker registry operation: $COMMAND" >> ~/.claude/logs/sensitive-ops.log
+        echo "[ALERT] Docker registry operation: $COMMAND" >> "$SENSITIVE_LOG"
     fi
 fi
 
