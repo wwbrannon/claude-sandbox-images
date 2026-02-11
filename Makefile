@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-VERSION  ?= v1.0
+VERSION  ?= v1.1
 VARIANTS := base r
 IMAGE_PREFIX := claude-sandbox
 PLATFORMS ?= linux/amd64,linux/arm64
