@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly, Monday 6am UTC
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build base image
+        run: docker build -f Dockerfile.base -t claude-sandbox-base:scan -t claude-sandbox-base:latest .
+
+      - name: Build R image
+        run: docker build -f Dockerfile.r -t claude-sandbox-r:scan .
+
+      - name: Scan base image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: claude-sandbox-base:scan
+          ignore-unfixed: false
+          severity: HIGH,CRITICAL
+          exit-code: 0  # advise on vulns in latest packages
+
+      - name: Scan R image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: claude-sandbox-r:scan
+          ignore-unfixed: false
+          severity: HIGH,CRITICAL
+          exit-code: 0  # advise on vulns in latest packages
