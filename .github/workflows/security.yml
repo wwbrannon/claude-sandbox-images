@@ -1,4 +1,4 @@
-name: Security Scan
+name: Build and Security Scan
 
 on:
   push:
@@ -13,16 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+
       - name: Build base image
         run: docker build -f Dockerfile.base -t claude-sandbox-base:scan -t claude-sandbox-base:latest .
+
       - name: Build R image
         run: docker build -f Dockerfile.r -t claude-sandbox-r:scan .
+
       - name: Scan base image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: claude-sandbox-base:scan
           severity: CRITICAL
           exit-code: 1
+
       - name: Scan R image
         uses: aquasecurity/trivy-action@master
         with:
