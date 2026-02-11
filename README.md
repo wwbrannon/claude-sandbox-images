@@ -1,4 +1,4 @@
-# Claude Code Sandbox Docker Images
+# Docker Sandbox Images for Claude Code
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub issues](https://img.shields.io/github/issues/wwbrannon/claude-sandbox-images)](https://github.com/wwbrannon/claude-sandbox-images/issues)
@@ -27,29 +27,27 @@ docker run -it -v $(pwd):/workspace claude-sandbox-base /bin/bash
 
 ### With Cloud Credentials
 
-All cloud CLIs and SDKs are included in both images.
+All cloud CLIs and SDKs are included in both images. Since `docker sandbox` doesn't accept `-e` flags, pass credentials via a `.env` file in your project directory (which is mounted as `/workspace`). You'll need automation (e.g., the entrypoint script, a shell profile, Makefile targets that use them) to load these variables inside the container.
 
 ```bash
-# AWS (pass credentials via env, not files)
-docker run -it -v $(pwd):/workspace \
-  -e AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY \
-  -e AWS_DEFAULT_REGION \
-  claude-sandbox-base
+# .env (add to .gitignore!)
 
-# GCP (mount service account key)
-docker run -it -v $(pwd):/workspace \
-  -v /path/to/service-account.json:/workspace/.gcp/key.json:ro \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/.gcp/key.json \
-  claude-sandbox-base
+# AWS
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_DEFAULT_REGION=us-east-1
+
+# GCP — place the service account key in your project directory
+# and point to it relative to /workspace
+GOOGLE_APPLICATION_CREDENTIALS=/workspace/.gcp/service-account.json
 
 # Azure
-docker run -it -v $(pwd):/workspace \
-  -e AZURE_TENANT_ID \
-  -e AZURE_CLIENT_ID \
-  -e AZURE_CLIENT_SECRET \
-  claude-sandbox-base
+AZURE_TENANT_ID=...
+AZURE_CLIENT_ID=...
+AZURE_CLIENT_SECRET=...
 ```
+
+For GCP, copy your service account key into the project (e.g., `.gcp/service-account.json`) and add that path to `.gitignore` as well.
 
 ## Building Images
 
@@ -148,13 +146,11 @@ WORKDIR /workspace
 
 ### Modifying Permission Rules
 
-Mount a custom user settings file (cannot override deny rules):
+Since `docker sandbox` only mounts the project directory, customize settings by extending the image. User settings cannot override deny rules.
 
-```bash
-docker run -it \
-  -v $(pwd):/workspace \
-  -v $(pwd)/my-settings.json:/home/agent/.claude/settings.json:ro \
-  claude-sandbox-base
+```dockerfile
+FROM claude-sandbox-base:latest
+COPY --chown=agent:agent my-settings.json /home/agent/.claude/settings.json
 ```
 
 To change deny rules, create a custom image with a modified `/etc/claude-code/managed-settings.json`.
@@ -183,9 +179,8 @@ USER agent
 ## Best Practices
 
 1. **Don't mount sensitive directories**: Keep ~/.ssh, ~/.aws, etc. off the container
-2. **Use environment variables for credentials**: Pass via `-e` flag, not mounted files
-3. **Create custom images for persistence**: Extend these images for additional tools
-4. **Review audit logs** when security is important: Check `/var/log/claude-audit/` for unexpected operations
+2. **Create custom images for persistence**: Extend these images for additional tools
+3. **Review audit logs** when security is important: Check `/var/log/claude-audit/` for unexpected operations
 
 ## Contributing
 
