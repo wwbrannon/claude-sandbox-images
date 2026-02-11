@@ -3,7 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub issues](https://img.shields.io/github/issues/wwbrannon/claude-sandbox-images)](https://github.com/wwbrannon/claude-sandbox-images/issues)
 
-Lightweight, secure Docker images for running Claude Code in sandboxed environments with defense-in-depth security.
+Lightweight images for running Docker-sandboxed Claude Code, with more secure
+isolation than the builtin `bwrap` sandbox. The idea is to make
+`--dangerously-skip-permissions` safe.
 
 ## Quick Start
 
