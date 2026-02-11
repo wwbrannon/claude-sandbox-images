@@ -3,6 +3,7 @@ SHELL := /bin/bash
 VERSION  ?= v1.0
 VARIANTS := base r
 IMAGE_PREFIX := claude-sandbox
+PLATFORMS ?= linux/amd64,linux/arm64
 
 #
 # image building and management
@@ -19,16 +20,21 @@ build: ## help: Build all containers
 
 REGISTRY ?=
 .PHONY: push
-push: build ## help: Push the containers to the registry given by the REGISTRY env variable
+push: ## help: Build multi-arch images and push to the registry given by REGISTRY
 ifndef REGISTRY
 	$(error REGISTRY is not set. Usage: make push REGISTRY=ghcr.io/youruser)
 endif
-	for variant in $(VARIANTS); do \
-		docker tag $(IMAGE_PREFIX)-$$variant:$(VERSION) $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:$(VERSION) && \
-		docker tag $(IMAGE_PREFIX)-$$variant:latest   $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:latest   && \
-		docker push $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:$(VERSION) && \
-		docker push $(REGISTRY)/$(IMAGE_PREFIX)-$$variant:latest; \
-	done
+	docker buildx build --platform $(PLATFORMS) \
+		-f Dockerfile.base \
+		-t $(REGISTRY)/$(IMAGE_PREFIX)-base:$(VERSION) \
+		-t $(REGISTRY)/$(IMAGE_PREFIX)-base:latest \
+		--push .
+	docker buildx build --platform $(PLATFORMS) \
+		-f Dockerfile.r \
+		--build-arg BASE_IMAGE=$(REGISTRY)/$(IMAGE_PREFIX)-base:$(VERSION) \
+		-t $(REGISTRY)/$(IMAGE_PREFIX)-r:$(VERSION) \
+		-t $(REGISTRY)/$(IMAGE_PREFIX)-r:latest \
+		--push .
 
 rm: ## help: Delete the built containers
 	@for variant in $(VARIANTS); do \
