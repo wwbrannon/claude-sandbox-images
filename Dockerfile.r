@@ -20,7 +20,7 @@ RUN mkdir -p -m 755 /etc/apt/keyrings && mkdir -p -m 755 /etc/apt/sources.list.d
 ## Install lib dependencies, R/headers/base+recommended, CRAN packages
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
-    libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+    libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev qpdf \
     \
     r-base r-base-dev r-recommended littler \
     \
