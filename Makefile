@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 VERSION  ?= v1.1
-VARIANTS := base r
+VARIANTS := base r tex
 IMAGE_PREFIX := claude-sandbox
 PLATFORMS ?= linux/amd64,linux/arm64
 
@@ -24,17 +24,18 @@ push: ## help: Build multi-arch images and push to the registry given by REGISTR
 ifndef REGISTRY
 	$(error REGISTRY is not set. Usage: make push REGISTRY=ghcr.io/youruser)
 endif
-	docker buildx build --platform $(PLATFORMS) \
-		-f Dockerfile.base \
-		-t $(REGISTRY)/$(IMAGE_PREFIX)-base:$(VERSION) \
-		-t $(REGISTRY)/$(IMAGE_PREFIX)-base:latest \
-		--push .
-	docker buildx build --platform $(PLATFORMS) \
-		-f Dockerfile.r \
-		--build-arg BASE_IMAGE=$(REGISTRY)/$(IMAGE_PREFIX)-base:$(VERSION) \
-		-t $(REGISTRY)/$(IMAGE_PREFIX)-r:$(VERSION) \
-		-t $(REGISTRY)/$(IMAGE_PREFIX)-r:latest \
-		--push .
+	for variant in $(VARIANTS); do \
+		build_arg=""; \
+		if [ "$$variant" != "base" ]; then \
+			build_arg="--build-arg BASE_IMAGE=$(REGISTRY)/$(IMAGE_PREFIX)-base:$(VERSION)"; \
+		fi; \
+		docker buildx build --platform $(PLATFORMS) \
+			-f "Dockerfile.$$variant" \
+			$$build_arg \
+			-t "$(REGISTRY)/$(IMAGE_PREFIX)-$$variant:$(VERSION)" \
+			-t "$(REGISTRY)/$(IMAGE_PREFIX)-$$variant:latest" \
+			--push .; \
+	done
 
 rm: ## help: Delete the built containers
 	@for variant in $(VARIANTS); do \

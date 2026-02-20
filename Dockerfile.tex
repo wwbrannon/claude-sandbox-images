@@ -1,0 +1,21 @@
+# Claude Code Sandbox - TeX/LaTeX Variant
+# Base image + TeX Live ecosystem for working on LaTeX documents
+ARG BASE_IMAGE=claude-sandbox-base:latest
+FROM ${BASE_IMAGE}
+
+# Switch to root for installations
+USER root
+
+# Install TeX Live (full distribution) and supporting tools
+RUN apt-get update -qq && apt-get install -y --no-install-recommends \
+    texlive-full \
+    biber \
+    latexmk \
+    chktex lacheck \
+    texlive-extra-utils \
+    ghostscript poppler-utils \
+    xindy \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Don't set USER here - entrypoint.sh handles user switching
+WORKDIR /workspace
